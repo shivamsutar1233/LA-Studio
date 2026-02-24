@@ -85,7 +85,7 @@ function RegisterForm() {
           </div>
           
           {/* Dev toggle for testing Admin flows */}
-          <div className="flex items-center gap-2 pt-2">
+          {/* <div className="flex items-center gap-2 pt-2">
             <input 
               type="checkbox" 
               id="adminToggle" 
@@ -94,7 +94,7 @@ function RegisterForm() {
               className="rounded border-surface-border text-accent focus:ring-accent"
             />
             <label htmlFor="adminToggle" className="text-sm text-muted-foreground">Register as Admin (For Testing)</label>
-          </div>
+          </div> */}
           
           <button 
             type="submit" 
