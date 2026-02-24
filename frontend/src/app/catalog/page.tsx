@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import GearCard from "@/components/ui/GearCard";
 import { Filter } from "lucide-react";
-import axios from 'axios';
+import api from '@/lib/api';
 import { useSearchParams } from 'next/navigation';
 
 interface GearParams {
@@ -44,7 +44,7 @@ function CatalogContent() {
   useEffect(() => {
     const fetchGear = async () => {
       try {
-        const response = await axios.get('http://localhost:3001/api/gears');
+        const response = await api.get('/api/gears');
         setGearItems(response.data);
       } catch (error) {
         console.error("Error fetching gear:", error);

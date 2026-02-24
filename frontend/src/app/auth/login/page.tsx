@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import axios from 'axios';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
 
@@ -20,7 +20,7 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:3001/api/auth/login', { email, password });
+      const response = await api.post('/api/auth/login', { email, password });
       authLogin(response.data.user, response.data.token);
       toast.success('Login Successful', { description: `Welcome back, ${response.data.user.name}!` });
       if (redirectParams) {

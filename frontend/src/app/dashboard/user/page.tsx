@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { Package, CalendarRange, Clock, Edit2, Check, X, User as UserIcon, Mail } from 'lucide-react';
 import { toast } from 'sonner';
@@ -53,14 +53,14 @@ export default function UserDashboard() {
     const fetchDashboardData = async () => {
       try {
         // Fetch User Bookings
-        const bookingsRes = await axios.get('http://localhost:3001/api/bookings', {
+        const bookingsRes = await api.get('/api/bookings', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setBookings(bookingsRes.data);
 
         // Fetch Gear Details to map IDs to Names (In a real app, populate this on backend)
         try {
-          const gearRes = await axios.get('http://localhost:3001/api/gears');
+          const gearRes = await api.get('/api/gears');
           const gearMap: GearDetails = {};
           if (Array.isArray(gearRes.data)) {
             gearRes.data.forEach((g: any) => {
@@ -86,7 +86,7 @@ export default function UserDashboard() {
   const handleSaveProfile = async () => {
     setIsSavingProfile(true);
     try {
-      const res = await axios.put('http://localhost:3001/api/users/me', {
+      const res = await api.put('/api/users/me', {
         name: editName,
         email: editEmail
       }, {

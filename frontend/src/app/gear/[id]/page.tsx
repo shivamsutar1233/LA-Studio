@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '@/lib/api';
 import { ShieldCheck, CheckCircle2, Star, ArrowLeft, ShoppingCart } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { differenceInDays, parseISO } from 'date-fns';
@@ -40,7 +40,7 @@ export default function GearDetailPage() {
     if (!id) return;
     const fetchGear = async () => {
       try {
-        const response = await axios.get(`http://localhost:3001/api/gears/${id}`);
+        const response = await api.get(`/api/gears/${id}`);
         setGear(response.data);
         if (response.data.thumbnail) {
           setSelectedImage(response.data.thumbnail);

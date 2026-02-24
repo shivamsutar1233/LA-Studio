@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { Users, FileText, Activity, Plus, Edit2, Trash2, CheckCircle, XCircle, UploadCloud, Eye } from 'lucide-react';
 import { toast } from 'sonner';
@@ -61,8 +61,8 @@ export default function AdminDashboard() {
   const fetchAdminData = async () => {
     try {
       const [bookingsRes, gearsRes] = await Promise.all([
-        axios.get('http://localhost:3001/api/admin/bookings', { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get('http://localhost:3001/api/gears')
+        api.get('/api/admin/bookings', { headers: { Authorization: `Bearer ${token}` } }),
+        api.get('/api/gears')
       ]);
       setBookings(bookingsRes.data.bookings || []);
       setUsers(bookingsRes.data.users || []);
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
       if (field === 'thumbnail') {
         const formDataPayload = new FormData();
         formDataPayload.append('file', files[0]);
-        const res = await axios.post('http://localhost:3001/api/admin/upload', formDataPayload, {
+        const res = await api.post('/api/admin/upload', formDataPayload, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setFormData(prev => ({ ...prev, thumbnail: res.data.url }));
@@ -130,7 +130,7 @@ export default function AdminDashboard() {
         for (let i = 0; i < files.length; i++) {
           const formDataPayload = new FormData();
           formDataPayload.append('file', files[i]);
-          const res = await axios.post('http://localhost:3001/api/admin/upload', formDataPayload, {
+          const res = await api.post('/api/admin/upload', formDataPayload, {
             headers: { Authorization: `Bearer ${token}` }
           });
           uploadedUrls.push(res.data.url);
@@ -157,13 +157,13 @@ export default function AdminDashboard() {
     try {
       if (editingGear) {
         // Update
-        await axios.put(`http://localhost:3001/api/gears/${editingGear.id}`, formData, {
+        await api.put(`/api/gears/${editingGear.id}`, formData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success("Gear updated successfully");
       } else {
         // Create
-        await axios.post('http://localhost:3001/api/gears', formData, {
+        await api.post('/api/gears', formData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success("New gear added successfully");
@@ -179,7 +179,7 @@ export default function AdminDashboard() {
   const deleteGear = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this gear permanently?")) return;
     try {
-      await axios.delete(`http://localhost:3001/api/gears/${id}`, {
+      await api.delete(`/api/gears/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Gear removed from catalog");
@@ -192,7 +192,7 @@ export default function AdminDashboard() {
 
   const updateBookingStatus = async (id: string, newStatus: string) => {
     try {
-      await axios.put(`http://localhost:3001/api/admin/bookings/${id}/status`, { status: newStatus }, {
+      await api.put(`/api/admin/bookings/${id}/status`, { status: newStatus }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success(`Booking marked as ${newStatus}`);

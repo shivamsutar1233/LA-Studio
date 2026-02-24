@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Trash2, ShieldCheck, ChevronRight, Lock, Plus, Minus } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '@/lib/api';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
@@ -39,7 +39,7 @@ export default function CartPage() {
 
   const fetchAddresses = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/users/me/addresses', {
+      const res = await api.get('/api/users/me/addresses', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAddresses(res.data);
@@ -55,7 +55,7 @@ export default function CartPage() {
   const handleSaveNewAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:3001/api/users/me/addresses', newAddress, {
+      const res = await api.post('/api/users/me/addresses', newAddress, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Address saved securely');
@@ -99,7 +99,7 @@ export default function CartPage() {
     setIsCheckingOut(true);
     try {
       // 1. Create Order on Backend
-      const orderRes = await axios.post('http://localhost:3001/api/payment/create-order', {
+      const orderRes = await api.post('/api/payment/create-order', {
         amount: total * 100, // Razorpay expects amount in paise
         currency: "INR"
       }, {
@@ -120,7 +120,7 @@ export default function CartPage() {
         handler: async function (response: any) {
           // 3. Verify Payment
           try {
-            await axios.post('http://localhost:3001/api/payment/verify', {
+            await api.post('/api/payment/verify', {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature
@@ -130,7 +130,7 @@ export default function CartPage() {
             const minDate = cartItems.reduce((min, p) => p.startDate < min ? p.startDate : min, cartItems[0].startDate);
             const maxDate = cartItems.reduce((max, p) => p.endDate > max ? p.endDate : max, cartItems[0].endDate);
 
-            await axios.post('http://localhost:3001/api/rentals', {
+            await api.post('/api/rentals', {
               cartItems: cartItems.map(item => ({
                 id: item.gearId,
                 name: item.name,

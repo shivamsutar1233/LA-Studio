@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import axios from 'axios';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
 
@@ -23,7 +23,7 @@ function RegisterForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post('http://localhost:3001/api/auth/register', { 
+      await api.post('/api/auth/register', { 
         name, 
         email, 
         password, 
