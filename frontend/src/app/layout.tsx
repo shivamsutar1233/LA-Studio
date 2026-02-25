@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "sonner";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -48,6 +49,7 @@ export default function RootLayout({
           <Footer />
           <Toaster position="bottom-right" theme="system" />
           <Analytics />
+          <SpeedInsights />
         </ThemeProvider>
       </body>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
