@@ -608,82 +608,127 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Order Details Modal */}
+      {/* Order Details Modal Redesign */}
       {viewingBooking && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-background border border-surface-border rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-surface-border flex justify-between items-center bg-surface top-0 sticky z-10">
-              <div>
-                <h3 className="text-xl font-bold text-foreground">Order Details</h3>
-                <p className="text-sm font-mono text-muted-foreground">ID: #{viewingBooking.id}</p>
-              </div>
-              <button onClick={() => setViewingBooking(null)} className="text-muted-foreground hover:text-foreground p-2 bg-background rounded-full border border-surface-border">✕</button>
-            </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-surface border border-surface-border rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col max-h-[90vh]">
             
-            <div className="p-6 overflow-y-auto space-y-8 flex-1">
-              {/* Customer & Booking Info */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-surface p-5 rounded-xl border border-surface-border">
-                <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Customer</p>
-                  <p className="font-medium text-foreground">{users.find(u => u.id === viewingBooking.userId)?.name || viewingBooking.customerDetails?.name || 'Guest Checkout'}</p>
-                  <p className="text-sm text-muted-foreground">{users.find(u => u.id === viewingBooking.userId)?.email || 'No email provided'}</p>
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-surface-border flex justify-between items-center bg-background top-0 sticky z-10">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center border border-accent/20">
+                  <FileText className="h-5 w-5 text-accent" />
                 </div>
-                
-                {viewingBooking.deliveryAddress ? (
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 px-2">Delivery Address</p>
-                    <div className="bg-background border border-surface-border rounded-lg p-2 text-sm leading-snug">
-                       <p className="font-bold text-foreground">{viewingBooking.deliveryAddress.street}</p>
-                       <p className="text-muted-foreground">{viewingBooking.deliveryAddress.city}, {viewingBooking.deliveryAddress.state} {viewingBooking.deliveryAddress.zip}</p>
-                    </div>
-                  </div>
-                ) : (
-                   <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Delivery Address</p>
-                    <p className="text-sm text-muted-foreground italic">None provided (pickup)</p>
-                  </div>
-                )}
-                
-                <div className="md:col-span-1 space-y-4">
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Status</p>
-                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                      viewingBooking.status === 'confirmed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
-                      viewingBooking.status === 'rejected' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
-                      'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+                <div>
+                  <h3 className="text-xl font-black text-foreground">Order Details</h3>
+                  <p className="text-sm font-mono text-muted-foreground flex items-center gap-2">
+                    ID: #{viewingBooking.id}
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                      viewingBooking.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                      viewingBooking.status === 'rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                      'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                     }`}>
                       {viewingBooking.status}
                     </span>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Rental Period</p>
-                    <p className="text-sm font-medium text-foreground">{viewingBooking.startDate} &rarr; {viewingBooking.endDate}</p>
-                  </div>
-                  <div className="pt-2">
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Verification details</p>
-                    {viewingBooking.undertakingSigned === 1 ? (
-                       <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 shadow-inner">
-                         <div className="flex items-center gap-2 mb-2 text-green-500 font-bold text-sm">
-                           <CheckCircle className="h-4 w-4" /> Signed
-                         </div>
-                         <p className="text-xs text-muted-foreground mb-1">Aadhaar: <span className="font-mono text-foreground tracking-widest">{viewingBooking.aadhaarNumber}</span></p>
-                         {viewingBooking.aadhaarUrl && (
-                           <a href={viewingBooking.aadhaarUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-accent hover:underline flex items-center gap-1 mt-2">
-                             <FileText className="h-3 w-3" /> View Document
-                           </a>
-                         )}
-                       </div>
-                    ) : (
-                       <p className="text-sm text-yellow-500/80 font-medium italic">Pending customer signature</p>
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setViewingBooking(null)} className="text-muted-foreground hover:text-foreground hover:bg-surface-border p-2 rounded-full transition-colors">
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-surface">
+              
+              {/* Verification Banner */}
+              <div className="w-full">
+                {viewingBooking.undertakingSigned === 1 ? (
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-green-500">Identity Verified & Undertaking Signed</h4>
+                        <p className="text-sm text-foreground font-medium mt-0.5">Aadhaar: <span className="font-mono tracking-widest bg-background px-1.5 py-0.5 rounded border border-surface-border/50">{viewingBooking.aadhaarNumber}</span></p>
+                      </div>
+                    </div>
+                    {viewingBooking.aadhaarUrl && (
+                      <a href={viewingBooking.aadhaarUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 bg-background border border-green-500/30 text-green-500 hover:bg-green-500 hover:text-white px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 text-sm shadow-sm">
+                        <FileText className="h-4 w-4" /> View KYC Document
+                      </a>
                     )}
+                  </div>
+                ) : (
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+                    <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
+                      <Activity className="h-5 w-5 text-yellow-500" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-yellow-500">Verification Pending</h4>
+                      <p className="text-sm text-muted-foreground mt-0.5">Customer has not yet signed the undertaking or provided Aadhaar details.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Top Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Customer Card */}
+                <div className="bg-background border border-surface-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Customer Details</h4>
+                  </div>
+                  <p className="text-lg font-black text-foreground truncate">{users.find(u => u.id === viewingBooking.userId)?.name || viewingBooking.customerDetails?.name || 'Guest Checkout'}</p>
+                  <p className="text-sm text-muted-foreground truncate">{users.find(u => u.id === viewingBooking.userId)?.email || 'No email provided'}</p>
+                </div>
+                
+                {/* Delivery Card */}
+                <div className="bg-background border border-surface-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Fulfillment</h4>
+                  </div>
+                  {viewingBooking.deliveryAddress ? (
+                    <div>
+                       <p className="font-bold text-foreground text-sm truncate">{viewingBooking.deliveryAddress.street}</p>
+                       <p className="text-sm text-muted-foreground truncate">{viewingBooking.deliveryAddress.city}, {viewingBooking.deliveryAddress.state} {viewingBooking.deliveryAddress.zip}</p>
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center">
+                      <p className="text-sm font-medium text-muted-foreground italic bg-surface px-3 py-1 rounded-lg border border-surface-border">Studio Pickup</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Dates Card */}
+                <div className="bg-background border border-surface-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Rental Period</h4>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground font-medium">From:</span>
+                      <span className="font-bold text-foreground">{viewingBooking.startDate}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground font-medium">To:</span>
+                      <span className="font-bold text-foreground">{viewingBooking.endDate}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Gear List */}
-              <div>
-                <h4 className="text-sm font-bold text-foreground mb-4 uppercase tracking-wider border-b border-surface-border pb-2">Included Gear</h4>
-                <div className="space-y-3">
+              <div className="bg-background border border-surface-border rounded-2xl p-6 shadow-sm">
+                <h4 className="text-base font-black text-foreground mb-4 flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-accent" />
+                  Included Equipment
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(() => {
                     let gearItems: any[] = [];
                     try {
@@ -710,19 +755,29 @@ export default function AdminDashboard() {
                       const itemDays = isObject && item.days ? item.days : calcDays;
                       const itemPrice = isObject && item.pricePerDay ? item.pricePerDay : (gear?.pricePerDay || 0);
                       const itemQty = isObject && item.quantity ? item.quantity : 1;
+                      const totalItemPrice = itemPrice * itemDays * itemQty;
 
                       return (
-                        <div key={idx} className="flex items-center gap-4 bg-background border border-surface-border p-3 rounded-xl">
-                          <div className="h-12 w-12 rounded bg-surface border border-surface-border shrink-0 flex items-center justify-center overflow-hidden">
-                            {gear?.thumbnail ? <img src={gear.thumbnail} alt={gear.name || 'Gear'} className="h-full w-full object-cover" /> : <span className="text-[8px] text-muted-foreground">IMG</span>}
+                        <div key={idx} className="flex flex-col sm:flex-row gap-4 bg-surface border border-surface-border p-4 rounded-2xl hover:border-accent/30 transition-colors group">
+                          <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-xl bg-background border border-surface-border shrink-0 flex items-center justify-center overflow-hidden shadow-inner">
+                            {gear?.thumbnail ? <img src={gear.thumbnail} alt={gear.name || 'Gear'} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" /> : <span className="text-[10px] text-muted-foreground font-bold">NO IMG</span>}
                           </div>
-                          <div className="flex-1">
-                            <p className="font-bold text-sm text-foreground">{isObject ? item.name : (gear?.name || 'Unknown Gear ID: ' + id)} <span className="font-normal text-muted-foreground ml-1">x{itemQty}</span></p>
-                            <p className="text-xs text-muted-foreground">{itemStartDate} &rarr; {itemEndDate}</p>
-                          </div>
-                          <div className="text-right flex flex-col items-end">
-                            <p className="font-bold text-sm text-foreground">₹{itemPrice}<span className="text-xs text-muted-foreground font-normal">/day</span></p>
-                            <p className="text-xs font-bold text-accent">Total: ₹{itemPrice * itemDays * itemQty}</p>
+                          <div className="flex-1 flex flex-col justify-between py-1">
+                            <div>
+                              <p className="font-bold text-base text-foreground mb-1 leading-tight line-clamp-2">
+                                {isObject ? item.name : (gear?.name || 'Unknown Gear ID: ' + id)} 
+                              </p>
+                              <div className="inline-flex bg-background border border-surface-border rounded-lg px-2 py-1 text-xs font-bold text-muted-foreground">
+                                Qty: <span className="text-foreground ml-1">{itemQty}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-3 flex items-end justify-between border-t border-surface-border/50 pt-2">
+                              <div>
+                                <p className="text-xs text-muted-foreground font-medium mb-0.5">{itemDays} Days @ ₹{itemPrice}</p>
+                              </div>
+                              <p className="font-black text-lg text-accent">₹{totalItemPrice.toLocaleString()}</p>
+                            </div>
                           </div>
                         </div>
                       );
@@ -733,7 +788,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Actions Footer */}
-            <div className="p-6 border-t border-surface-border bg-surface flex justify-end gap-3 shrink-0">
+            <div className="p-5 border-t border-surface-border bg-background flex justify-end gap-3 shrink-0">
                {viewingBooking.status === 'pending' && (
                  <>
                   <button 
@@ -744,18 +799,18 @@ export default function AdminDashboard() {
                   </button>
                   <button 
                     onClick={() => { updateBookingStatus(viewingBooking.id, 'confirmed'); setViewingBooking(null); }}
-                    className="px-6 py-2.5 rounded-xl bg-green-500 text-white font-bold hover:bg-green-600 transition-colors shadow-lg shadow-green-500/20"
+                    className="px-6 py-2.5 rounded-xl bg-green-500 text-white font-bold hover:bg-green-600 transition-colors shadow-lg shadow-green-500/20 flex items-center gap-2"
                   >
-                    Approve Order
+                    <CheckCircle className="h-4 w-4" /> Approve Order
                   </button>
                  </>
                )}
                {viewingBooking.status !== 'pending' && (
                  <button 
                    onClick={() => setViewingBooking(null)}
-                   className="px-6 py-2.5 rounded-xl border border-surface-border text-foreground font-bold hover:bg-background transition-colors"
+                   className="px-8 py-2.5 rounded-xl bg-surface border border-surface-border text-foreground font-bold hover:bg-surface-border transition-colors"
                  >
-                   Close
+                   Done
                  </button>
                )}
             </div>
