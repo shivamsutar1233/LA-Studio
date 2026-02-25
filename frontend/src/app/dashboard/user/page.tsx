@@ -227,30 +227,35 @@ export default function UserDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
-                {bookings.map((booking) => (
+                {bookings.map((booking) => {
+                  const gearListStr = booking.gearIds ? (() => {
+                    try {
+                      const ids = JSON.parse(booking.gearIds);
+                      if (Array.isArray(ids)) {
+                        return ids.map((item: any) => {
+                            if (typeof item === 'string') {
+                                return gearInfo[item]?.name || 'Unknown Gear';
+                            } else if (item && item.id) {
+                                const qtyStr = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
+                                return `${item.name}${qtyStr} (${item.days} days)`;
+                            }
+                            return 'Unknown Item';
+                        }).join(', ');
+                      }
+                      return 'Invalid format';
+                    } catch(e) {
+                      // Fallback if migration hasn't converted old single UUIDs yet
+                      return gearInfo[booking.gearIds]?.name || 'Legacy Gear Entry';
+                    }
+                  })() : 'No Gear';
+
+                  return (
                   <tr key={booking.id} className="hover:bg-background/30 transition-colors">
                     <td className="p-4 text-sm font-mono text-muted-foreground">#{booking.id}</td>
-                    <td className="p-4 text-sm font-bold text-foreground">
-                      {booking.gearIds ? (() => {
-                        try {
-                          const ids = JSON.parse(booking.gearIds);
-                          if (Array.isArray(ids)) {
-                            return ids.map((item: any) => {
-                                if (typeof item === 'string') {
-                                    return gearInfo[item]?.name || 'Unknown Gear';
-                                } else if (item && item.id) {
-                                    const qtyStr = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
-                                    return `${item.name}${qtyStr} (${item.days} days)`;
-                                }
-                                return 'Unknown Item';
-                            }).join(', ');
-                          }
-                          return 'Invalid format';
-                        } catch(e) {
-                          // Fallback if migration hasn't converted old single UUIDs yet
-                          return gearInfo[booking.gearIds]?.name || 'Legacy Gear Entry';
-                        }
-                      })() : 'No Gear'}
+                    <td className="p-4 text-sm font-bold text-foreground max-w-[200px]" title={gearListStr}>
+                      <div className="truncate">
+                        {gearListStr}
+                      </div>
                     </td>
                     <td className="p-4 text-sm text-foreground">
                       {booking.startDate} &rarr; {booking.endDate}
@@ -265,7 +270,8 @@ export default function UserDashboard() {
                       </span>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

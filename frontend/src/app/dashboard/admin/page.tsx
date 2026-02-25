@@ -286,32 +286,37 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-border">
-                    {bookings.length > 0 ? bookings.map((b) => (
+                    {bookings.length > 0 ? bookings.map((b) => {
+                      const gearListStr = b.gearIds ? (() => {
+                        try {
+                          const ids = JSON.parse(b.gearIds);
+                          if (Array.isArray(ids)) {
+                            return ids.map((item: any) => {
+                                if (typeof item === 'string') {
+                                    return gears.find(g => g.id === item)?.name || 'Unknown Gear';
+                                } else if (item && item.id) {
+                                    const qtyStr = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
+                                    return `${item.name}${qtyStr} (${item.days} days)`;
+                                }
+                                return 'Unknown Item';
+                            }).join(', ');
+                          }
+                          return 'Invalid format';
+                        } catch(e) {
+                           return gears.find(g => g.id === b.gearIds)?.name || 'Legacy Gear Entry';
+                        }
+                      })() : 'No Gear';
+
+                      return (
                       <tr key={b.id} className="hover:bg-background/30 transition-colors">
                         <td className="p-4 text-sm font-mono text-muted-foreground">#{b.id}</td>
                         <td className="p-4 text-sm font-medium text-foreground">
                           {users.find(u => u.id === b.userId)?.name || b.customerDetails?.name || 'Guest Checkout'}
                         </td>
-                        <td className="p-4 text-sm font-medium text-accent">
-                          {b.gearIds ? (() => {
-                            try {
-                              const ids = JSON.parse(b.gearIds);
-                              if (Array.isArray(ids)) {
-                                return ids.map((item: any) => {
-                                    if (typeof item === 'string') {
-                                        return gears.find(g => g.id === item)?.name || 'Unknown Gear';
-                                    } else if (item && item.id) {
-                                        const qtyStr = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
-                                        return `${item.name}${qtyStr} (${item.days} days)`;
-                                    }
-                                    return 'Unknown Item';
-                                }).join(', ');
-                              }
-                              return 'Invalid format';
-                            } catch(e) {
-                               return gears.find(g => g.id === b.gearIds)?.name || 'Legacy Gear Entry';
-                            }
-                          })() : 'No Gear'}
+                        <td className="p-4 text-sm font-medium text-accent max-w-[200px]" title={gearListStr}>
+                          <div className="truncate">
+                            {gearListStr}
+                          </div>
                         </td>
                         <td className="p-4 text-sm text-foreground">{b.startDate} to {b.endDate}</td>
                         <td className="p-4 text-sm">
@@ -339,7 +344,8 @@ export default function AdminDashboard() {
                           )}
                         </td>
                       </tr>
-                    )) : (
+                      );
+                    }) : (
                       <tr>
                         <td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No bookings found on the platform.</td>
                       </tr>
