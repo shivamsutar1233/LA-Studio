@@ -21,6 +21,9 @@ interface AdminBooking {
     state: string;
     zip: string;
   } | null;
+  undertakingSigned: number;
+  aadhaarNumber?: string | null;
+  aadhaarUrl?: string | null;
 }
 
 interface UserData {
@@ -635,6 +638,24 @@ export default function AdminDashboard() {
                   <div>
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Rental Period</p>
                     <p className="text-sm font-medium text-foreground">{viewingBooking.startDate} &rarr; {viewingBooking.endDate}</p>
+                  </div>
+                  <div className="pt-2">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Verification details</p>
+                    {viewingBooking.undertakingSigned === 1 ? (
+                       <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 shadow-inner">
+                         <div className="flex items-center gap-2 mb-2 text-green-500 font-bold text-sm">
+                           <CheckCircle className="h-4 w-4" /> Signed
+                         </div>
+                         <p className="text-xs text-muted-foreground mb-1">Aadhaar: <span className="font-mono text-foreground tracking-widest">{viewingBooking.aadhaarNumber}</span></p>
+                         {viewingBooking.aadhaarUrl && (
+                           <a href={viewingBooking.aadhaarUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-accent hover:underline flex items-center gap-1 mt-2">
+                             <FileText className="h-3 w-3" /> View Document
+                           </a>
+                         )}
+                       </div>
+                    ) : (
+                       <p className="text-sm text-yellow-500/80 font-medium italic">Pending customer signature</p>
+                    )}
                   </div>
                 </div>
               </div>

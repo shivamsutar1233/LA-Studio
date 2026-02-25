@@ -245,6 +245,27 @@ app.post("/api/admin/upload", authenticateToken, requireAdmin, upload.single('fi
   }
 });
 
+app.post("/api/user/upload", authenticateToken, upload.single('file'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ message: "No file provided" });
+      return;
+    }
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      res.status(500).json({ message: "Vercel Blob token not configured." });
+      return;
+    }
+    const uniquePrefix = `LAS-USER/${Date.now()}-${Math.round(Math.random() * 1E9)}-`;
+    const blob = await put(uniquePrefix + req.file.originalname, req.file.buffer, {
+      access: 'public',
+    });
+    res.json({ url: blob.url });
+  } catch (err) {
+    console.error("User Upload Error:", err);
+    res.status(500).json({ message: "Error uploading user file to Blob" });
+  }
+});
+
 // Create new gear (Admin only)
 app.post("/api/gears", authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
@@ -342,15 +363,129 @@ app.post("/api/rentals", authenticateToken, async (req: Request, res: Response):
   }
 });
 
-// Get bookings for current user
 app.get("/api/bookings", authenticateToken, async (req: Request, res: Response) => {
   const user = (req as any).user;
   try {
     const db = await getDb();
-    const userBookings = await db.all('SELECT * FROM bookings WHERE userId = ?', user.id);
+    const userBookings = await db.all('SELECT * FROM bookings WHERE userId = ? ORDER BY createdAt DESC', user.id);
     res.json(userBookings);
   } catch (err) {
     res.status(500).json({ message: "Error fetching bookings" });
+  }
+});
+
+// --- AADHAAR OTP VERIFICATION (3rd Party Proxy) ---
+app.post("/api/bookings/:id/aadhaar/generate-otp", authenticateToken, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { aadhaarNumber } = req.body;
+    const user = (req as any).user;
+    const bookingId = req.params.id;
+
+    if (!aadhaarNumber || aadhaarNumber.length !== 12) {
+      res.status(400).json({ message: "Valid 12-digit Aadhaar number is required" });
+      return;
+    }
+
+    const db = await getDb();
+    const booking = await db.get('SELECT * FROM bookings WHERE id = ? AND userId = ?', [bookingId, user.id]);
+    
+    if (!booking || booking.status !== 'confirmed') {
+      res.status(404).json({ message: "Booking not found or not eligible for undertaking" });
+      return;
+    }
+    if (booking.undertakingSigned) {
+      res.status(400).json({ message: "Undertaking already signed" });
+      return;
+    }
+
+    // Proxy to 3rd Party API (e.g. Surepass)
+    const API_KEY = process.env.AADHAAR_API_KEY || "";
+    const API_URL = process.env.AADHAAR_GENERATE_OTP_URL || "https://sandbox.surepass.io/api/v1/aadhaar-v2/generate-otp";
+
+    if (!API_KEY) {
+      // Mock flow when API key is not configured
+      console.log(`[MOCK API] Generating OTP for Aadhaar: ${aadhaarNumber}`);
+      res.json({ clientId: "mock_client_" + Date.now(), message: "OTP Sent Successfully (Mock)" });
+      return;
+    }
+
+    // Real API Call via fetch
+    const response = await fetch(API_URL, {
+       method: "POST",
+       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
+       body: JSON.stringify({ id_number: aadhaarNumber })
+    });
+    
+    const data = await response.json() as any;
+    
+    if (response.ok && data.status_code === 200 && data.data?.client_id) {
+       res.json({ clientId: data.data.client_id, message: "OTP Sent Successfully" });
+    } else {
+       res.status(400).json({ message: data.message || "Failed to generate OTP from Aadhaar authority" });
+    }
+
+  } catch (err) {
+    console.error("Generate OTP Error:", err);
+    res.status(500).json({ message: "Server error generating OTP" });
+  }
+});
+
+app.post("/api/bookings/:id/aadhaar/submit-otp", authenticateToken, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { clientId, otp, aadhaarNumber, aadhaarUrl } = req.body;
+    const user = (req as any).user;
+    const bookingId = req.params.id;
+
+    if (!clientId || !otp) {
+      res.status(400).json({ message: "Client ID and OTP are required" });
+      return;
+    }
+
+    // Proxy to 3rd Party API
+    const API_KEY = process.env.AADHAAR_API_KEY || "";
+    const API_URL = process.env.AADHAAR_SUBMIT_OTP_URL || "https://sandbox.surepass.io/api/v1/aadhaar-v2/submit-otp";
+
+    let aadhaarDetailsUrl = aadhaarUrl || "";
+
+    if (!API_KEY) {
+      // Mock flow when API key is not configured
+      console.log(`[MOCK API] Verifying OTP: ${otp} for Client: ${clientId}`);
+      if (otp !== '123456') { // Hardcoded success code for testing
+         res.status(400).json({ message: "Invalid Mock OTP. Please use 123456." });
+         return;
+      }
+      if (!aadhaarDetailsUrl) aadhaarDetailsUrl = "https://example.com/mock_kyc_document.pdf"; // Mocked verified URL fallback
+    } else {
+      // Real API Call via fetch
+      const response = await fetch(API_URL, {
+         method: "POST",
+         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
+         body: JSON.stringify({ client_id: clientId, otp })
+      });
+      
+      const data = await response.json() as any;
+      
+      if (response.ok && data.status_code === 200) {
+         // Securely store the profile image or KYC report generated by the API if one wasn't explicitly uploaded
+         if (!aadhaarDetailsUrl) aadhaarDetailsUrl = data.data?.profile_image || "verified_via_api";
+      } else {
+         res.status(400).json({ message: data.message || "Invalid OTP or Verification Failed" });
+         return;
+      }
+    }
+
+    // Save success to database and sign the undertaking
+    const db = await getDb();
+    await db.run(
+      'UPDATE bookings SET undertakingSigned = 1, aadhaarNumber = ?, aadhaarUrl = ? WHERE id = ?',
+      [aadhaarNumber, aadhaarDetailsUrl, bookingId]
+    );
+
+    res.json({ message: "Undertaking signed and Aadhaar verified successfully!" });
+
+  } catch (err) {
+    console.error("Submit OTP Error:", err);
+    res.status(500).json({ message: "Server error verifying OTP" });
   }
 });
 

@@ -171,6 +171,9 @@ export async function initDb(): Promise<DBAdapter> {
       status TEXT NOT NULL DEFAULT 'confirmed',
       customerName TEXT,
       createdAt TEXT NOT NULL,
+      undertakingSigned INTEGER DEFAULT 0,
+      aadhaarNumber TEXT,
+      aadhaarUrl TEXT,
       FOREIGN KEY (userId) REFERENCES users(id)
     );
 
@@ -195,6 +198,21 @@ export async function initDb(): Promise<DBAdapter> {
       await dbAdapter!.exec(`ALTER TABLE bookings ADD COLUMN addressId TEXT REFERENCES addresses(id)`);
     } catch (e) {
       console.log("Migration warning (addressId):", e); // Catch errors if table was just recreated by migration below
+    }
+  }
+
+  // Migration for Undertaking/Aadhaar
+  const hasUndertaking = bookingsColumns.some((c: any) => c.name === 'undertakingSigned');
+  if (!hasUndertaking) {
+    console.log("Migrating bookings table to include undertaking/Aadhaar fields...");
+    try {
+      await dbAdapter!.exec(`
+        ALTER TABLE bookings ADD COLUMN undertakingSigned INTEGER DEFAULT 0;
+        ALTER TABLE bookings ADD COLUMN aadhaarNumber TEXT;
+        ALTER TABLE bookings ADD COLUMN aadhaarUrl TEXT;
+      `);
+    } catch (e) {
+      console.log("Migration warning (undertaking):", e);
     }
   }
 
@@ -230,6 +248,9 @@ export async function initDb(): Promise<DBAdapter> {
           customerName TEXT,
           createdAt TEXT NOT NULL,
           addressId TEXT,
+          undertakingSigned INTEGER DEFAULT 0,
+          aadhaarNumber TEXT,
+          aadhaarUrl TEXT,
           FOREIGN KEY (userId) REFERENCES users(id),
           FOREIGN KEY (addressId) REFERENCES addresses(id)
         );
@@ -237,14 +258,14 @@ export async function initDb(): Promise<DBAdapter> {
 
       if (hasGearId) {
         const oldBookings = await dbAdapter!.all('SELECT * FROM bookings');
-        const stmt = await dbAdapter!.prepare('INSERT INTO bookings_new (id, userId, gearIds, startDate, endDate, status, customerName, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        const stmt = await dbAdapter!.prepare('INSERT INTO bookings_new (id, userId, gearIds, startDate, endDate, status, customerName, createdAt, addressId, undertakingSigned, aadhaarNumber, aadhaarUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         for (const b of oldBookings) {
           // If it's already a JSON array due to some partial migration, keep it, else wrap it
           let newGearIds = b.gearId;
           try { JSON.parse(newGearIds); } catch { newGearIds = JSON.stringify([b.gearId]); }
           // Handle cases where old Bookings didn't have AddressId
           const fallbackAddressId = b.addressId || null;
-          await stmt.run(b.id, b.userId, newGearIds, b.startDate, b.endDate, b.status, b.customerName, b.createdAt, fallbackAddressId);
+          await stmt.run(b.id, b.userId, newGearIds, b.startDate, b.endDate, b.status, b.customerName, b.createdAt, fallbackAddressId, b.undertakingSigned || 0, b.aadhaarNumber || null, b.aadhaarUrl || null);
         }
         await stmt.finalize();
       } else {

@@ -14,6 +14,7 @@ interface Booking {
   endDate: string;
   status: string;
   createdAt: string;
+  undertakingSigned: number;
 }
 
 interface GearDetails {
@@ -223,7 +224,7 @@ export default function UserDashboard() {
                   <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Booking ID</th>
                   <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Item</th>
                   <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dates</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status & Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
@@ -261,13 +262,30 @@ export default function UserDashboard() {
                       {booking.startDate} &rarr; {booking.endDate}
                     </td>
                     <td className="p-4 text-sm">
-                      <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                        booking.status === 'confirmed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
-                        booking.status === 'rejected' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
-                        'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
-                      }`}>
-                        {booking.status}
-                      </span>
+                      <div className="flex flex-col gap-2 items-start">
+                        <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                          booking.status === 'confirmed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
+                          booking.status === 'rejected' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
+                          'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+                        }`}>
+                          {booking.status}
+                        </span>
+                        
+                        {booking.status === 'confirmed' && (
+                          booking.undertakingSigned === 1 ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">
+                              <Check className="h-3 w-3" /> Signed
+                            </span>
+                          ) : (
+                            <button 
+                              onClick={() => router.push(`/dashboard/user/undertaking/${booking.id}`)}
+                              className="text-[10px] font-bold bg-accent text-white px-3 py-1.5 rounded hover:bg-accent-hover transition-colors shadow-sm"
+                            >
+                              Sign Undertaking
+                            </button>
+                          )
+                        )}
+                      </div>
                     </td>
                   </tr>
                   );
