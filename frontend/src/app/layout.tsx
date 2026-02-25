@@ -20,8 +20,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lean Angle Studio | Premium Moto Vlogging Gear Rental",
-  description: "Rent premium moto vlogging gear easily. GoPros, Insta360s, Mic setups and helmet mounts.",
+  title: "Lean Angle Studio | Turn Miles into Memories",
+  description: "Turn Miles into Memories with our premium moto vlogging gear rental. GoPros, Insta360s, Mic setups and helmet mounts.",
 };
 
 export const viewport: Viewport = {

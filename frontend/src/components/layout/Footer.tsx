@@ -11,7 +11,7 @@ export default function Footer() {
               <img src="https://ab2bbkrtuubturud.public.blob.vercel-storage.com/product_images/1771907071468-n7j05b1-Lean%20Angle%20Logo%20V2%20.png" alt="Lean Angle Studio Logo" className="h-10 w-10 object-contain" />
             </Link>
             <p className="mt-4 max-w-sm text-sm text-muted-foreground">
-              Premium moto vlogging gear rental. Capture every ride with the best equipment without breaking the bank.
+              Turn Miles into Memories. Capture every ride with the best equipment without breaking the bank.
             </p>
             <div className="mt-6 flex gap-4">
               <a href="#" className="text-muted-foreground hover:text-accent transition-colors"><Instagram className="h-5 w-5" /></a>

@@ -30,7 +30,7 @@ export default function Navbar() {
         {/* Desktop Menu */}
         <div className="hidden md:flex md:items-center md:gap-8">
           <Link href="/catalog" className="text-sm font-medium text-foreground hover:text-accent transition-colors">
-            Gear Catalog
+            Catalog
           </Link>
           <Link href="/how-it-works" className="text-sm font-medium text-foreground hover:text-accent transition-colors">
             How It Works
