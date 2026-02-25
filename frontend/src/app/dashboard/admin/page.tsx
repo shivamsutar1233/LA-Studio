@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
-import { Users, FileText, Activity, Plus, Edit2, Trash2, CheckCircle, XCircle, UploadCloud, Eye, Loader2 } from 'lucide-react';
+import { Users, FileText, Activity, Plus, Edit2, Trash2, CheckCircle, XCircle, UploadCloud, Eye, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AdminBooking {
@@ -51,6 +51,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [gears, setGears] = useState<GearData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -61,7 +62,8 @@ export default function AdminDashboard() {
   const [formData, setFormData] = useState({ name: '', category: 'Camera', pricePerDay: 0, thumbnail: '', images: '[]' });
   const [isUploading, setIsUploading] = useState(false);
 
-  const fetchAdminData = async () => {
+  const loadAdminData = async (isManualRefresh = false) => {
+    if (isManualRefresh) setIsRefreshing(true);
     try {
       const [bookingsRes, gearsRes] = await Promise.all([
         api.get('/api/admin/bookings', { headers: { Authorization: `Bearer ${token}` } }),
@@ -73,7 +75,8 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Failed to fetch admin data", error);
     } finally {
-      setLoading(false);
+      if (isManualRefresh) setIsRefreshing(false);
+      else setLoading(false);
     }
   };
 
@@ -90,7 +93,13 @@ export default function AdminDashboard() {
       router.push('/');
       return;
     }
-    fetchAdminData();
+    loadAdminData();
+    
+    (window as any).refreshAdminDashboard = () => loadAdminData(true);
+    
+    return () => {
+      delete (window as any).refreshAdminDashboard;
+    }
   }, [user, token, router, hasHydrated]);
 
   const stats = useMemo(() => {
@@ -172,7 +181,7 @@ export default function AdminDashboard() {
         toast.success("New gear added successfully");
       }
       setIsModalOpen(false);
-      fetchAdminData(); // Refresh table
+      loadAdminData(); // Refresh table
     } catch (error) {
       console.error("Error saving gear", error);
       toast.error("Failed to save gear");
@@ -186,7 +195,7 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Gear removed from catalog");
-      fetchAdminData(); // Refresh table
+      loadAdminData(); // Refresh table
     } catch (error) {
       console.error("Error deleting gear", error);
       toast.error("Failed to delete gear");
@@ -199,7 +208,7 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success(`Booking marked as ${newStatus}`);
-      fetchAdminData();
+      loadAdminData();
     } catch (error) {
       console.error("Error updating booking status", error);
       toast.error("Failed to update status");
@@ -275,7 +284,18 @@ export default function AdminDashboard() {
           <div className="w-full">
             {/* Master Booking Table */}
             <div>
-              <h2 className="text-xl font-bold text-foreground mb-4">Master Booking Ledger</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-foreground">Master Booking Ledger</h2>
+                <button 
+                  onClick={() => (window as any).refreshAdminDashboard?.()}
+                  disabled={isRefreshing}
+                  className="p-2 mr-2 rounded-full hover:bg-surface border border-transparent hover:border-surface-border text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
+                  title="Refresh Bookings"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-accent' : ''}`} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
+              </div>
               <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden overflow-x-auto shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead>

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
-import { Package, CalendarRange, Clock, Edit2, Check, X, User as UserIcon, Mail, Loader2 } from 'lucide-react';
+import { Package, CalendarRange, Clock, Edit2, Check, X, User as UserIcon, Mail, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Booking {
@@ -33,6 +33,7 @@ export default function UserDashboard() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [gearInfo, setGearInfo] = useState<GearDetails>({});
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [hasHydrated, setHasHydrated] = useState(false);
 
@@ -51,7 +52,8 @@ export default function UserDashboard() {
       setEditEmail(user.email);
     }
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (isRefresh = false) => {
+      if (isRefresh) setIsRefreshing(true);
       try {
         // Fetch User Bookings
         const bookingsRes = await api.get('/api/bookings', {
@@ -77,11 +79,19 @@ export default function UserDashboard() {
         console.error("Failed to fetch dashboard data:", error);
         toast.error("Failed to load dashboard data.");
       } finally {
-        setLoading(false);
+        if (isRefresh) setIsRefreshing(false);
+        else setLoading(false);
       }
     };
 
     fetchDashboardData();
+    
+    // Attach to window so we can trigger it from outside the effect if needed
+    (window as any).refreshUserDashboard = () => fetchDashboardData(true);
+    
+    return () => {
+       delete (window as any).refreshUserDashboard;
+    }
   }, [user, token, router, hasHydrated]);
 
   const handleSaveProfile = async () => {
@@ -201,7 +211,18 @@ export default function UserDashboard() {
         </div>
       </div>
 
-      <h2 className="text-2xl font-bold text-foreground mb-6">Rental History</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-foreground">Rental History</h2>
+        <button 
+          onClick={() => (window as any).refreshUserDashboard?.()}
+          disabled={isRefreshing}
+          className="p-2 mr-2 rounded-full hover:bg-surface border border-transparent hover:border-surface-border text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
+          title="Refresh Bookings"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-accent' : ''}`} />
+          <span className="hidden sm:inline">Refresh</span>
+        </button>
+      </div>
       
       {bookings.length === 0 ? (
         <div className="bg-surface border border-surface-border rounded-2xl p-12 text-center flex flex-col items-center justify-center">
