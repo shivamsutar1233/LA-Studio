@@ -10,6 +10,7 @@
   --surface: #f7f7f7;
   --surface-border: #e5e5e5;
   --surface-foreground: #111111;
+  scroll-padding-top: 5rem; /* ~80px for the navbar offset */
 }
 
 .dark {
