@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
-import { Users, FileText, Activity, Plus, Edit2, Trash2, CheckCircle, XCircle, UploadCloud, Eye } from 'lucide-react';
+import { Users, FileText, Activity, Plus, Edit2, Trash2, CheckCircle, XCircle, UploadCloud, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AdminBooking {
@@ -205,7 +205,7 @@ export default function AdminDashboard() {
 
 
   if (loading) {
-    return <div className="flex-1 flex items-center justify-center p-20"><p className="text-muted-foreground">Loading admin data...</p></div>;
+    return <div className="flex-1 flex items-center justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
 
   return (
@@ -542,7 +542,7 @@ export default function AdminDashboard() {
                   disabled={isUploading}
                   className="flex-1 bg-accent text-white font-bold py-3 rounded-xl hover:bg-accent-hover transition-colors shadow-lg shadow-accent/20 disabled:opacity-50"
                 >
-                  {isUploading ? 'Uploading...' : editingGear ? 'Save Changes' : 'Add to Catalog'}
+                  {isUploading ? <><Loader2 className="h-5 w-5 animate-spin mr-2 inline" /> Uploading...</> : editingGear ? 'Save Changes' : 'Add to Catalog'}
                 </button>
               </div>
             </form>

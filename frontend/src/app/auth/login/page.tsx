@@ -6,6 +6,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
+import { Loader2 } from 'lucide-react';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -74,7 +75,7 @@ function LoginForm() {
             disabled={loading}
             className="w-full py-3 px-4 bg-accent text-white font-bold rounded-xl hover:bg-accent-hover transition-colors disabled:opacity-50"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? <><Loader2 className="h-5 w-5 animate-spin mr-2 inline" /> Signing in...</> : 'Sign In'}
           </button>
         </form>
         
@@ -91,7 +92,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex-1 flex items-center justify-center p-20"><p className="text-muted-foreground animate-pulse">Loading...</p></div>}>
+    <Suspense fallback={<div className="flex-1 flex items-center justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
       <LoginForm />
     </Suspense>
   );

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
-import { Package, CalendarRange, Clock, Edit2, Check, X, User as UserIcon, Mail } from 'lucide-react';
+import { Package, CalendarRange, Clock, Edit2, Check, X, User as UserIcon, Mail, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Booking {
@@ -105,7 +105,7 @@ export default function UserDashboard() {
   };
 
   if (loading) {
-    return <div className="flex-1 flex items-center justify-center p-20"><p className="text-muted-foreground">Loading dashboard...</p></div>;
+    return <div className="flex-1 flex items-center justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
 
   return (

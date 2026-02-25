@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
-import { ShieldCheck, CheckCircle2, Star, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Star, ArrowLeft, ShoppingCart, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { differenceInDays, parseISO } from 'date-fns';
 import { toast } from 'sonner';
@@ -87,7 +87,7 @@ export default function GearDetailPage() {
   };
 
   if (loading) {
-    return <div className="max-w-7xl mx-auto px-4 py-24 text-center text-muted-foreground">Loading gear details...</div>;
+    return <div className="max-w-7xl mx-auto px-4 py-24 flex justify-center items-center text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
   if (!gear) {

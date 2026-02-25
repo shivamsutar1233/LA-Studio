@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import GearCard from "@/components/ui/GearCard";
-import { Filter } from "lucide-react";
+import { Filter, Loader2 } from "lucide-react";
 import api from '@/lib/api';
 import { useSearchParams } from 'next/navigation';
 
@@ -119,7 +119,7 @@ function CatalogContent() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {loading ? (
-          <div className="col-span-full py-12 flex justify-center text-muted-foreground">Loading gear catalog...</div>
+          <div className="col-span-full py-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
         ) : (
           filteredGear.map(gear => (
             <GearCard key={gear.id} {...gear} />
@@ -132,7 +132,7 @@ function CatalogContent() {
 
 export default function CatalogPage() {
   return (
-    <Suspense fallback={<div className="max-w-7xl mx-auto px-4 py-16 text-muted-foreground w-full text-center">Loading catalog...</div>}>
+    <Suspense fallback={<div className="max-w-7xl mx-auto px-4 py-16 flex justify-center w-full"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
       <CatalogContent />
     </Suspense>
   );

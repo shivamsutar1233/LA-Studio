@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Trash2, ShieldCheck, ChevronRight, Lock, Plus, Minus } from 'lucide-react';
+import { Trash2, ShieldCheck, ChevronRight, Lock, Plus, Minus, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { useCartStore } from '@/store/cartStore';
@@ -182,7 +182,7 @@ export default function CartPage() {
   if (!mounted) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full flex-grow flex items-center justify-center">
-        <p className="text-muted-foreground animate-pulse text-lg">Loading your cart...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
