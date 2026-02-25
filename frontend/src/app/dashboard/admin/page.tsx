@@ -334,7 +334,14 @@ export default function AdminDashboard() {
                       <tr key={b.id} className="hover:bg-background/30 transition-colors">
                         <td className="p-4 text-sm font-mono text-muted-foreground">#{b.id}</td>
                         <td className="p-4 text-sm font-medium text-foreground">
-                          {users.find(u => u.id === b.userId)?.name || b.customerDetails?.name || 'Guest Checkout'}
+                          <div className="flex items-center gap-2">
+                            {users.find(u => u.id === b.userId)?.name || b.customerDetails?.name || 'Guest Checkout'}
+                            {b.undertakingSigned === 1 && (
+                              <div title="Identity Verified & Undertaking Signed" className="h-4 w-4 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="p-4 text-sm font-medium text-accent max-w-[200px]" title={gearListStr}>
                           <div className="truncate">
