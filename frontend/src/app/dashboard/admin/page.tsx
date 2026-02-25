@@ -353,6 +353,7 @@ export default function AdminDashboard() {
                           <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                             b.status === 'confirmed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
                             b.status === 'rejected' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
+                            b.status === 'cancelled' ? 'bg-surface-border text-muted-foreground border-surface-border' :
                             'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
                           }`}>
                             {b.status}
@@ -633,6 +634,7 @@ export default function AdminDashboard() {
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                       viewingBooking.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
                       viewingBooking.status === 'rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                      viewingBooking.status === 'cancelled' ? 'bg-surface-border text-muted-foreground border-surface-border' :
                       'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                     }`}>
                       {viewingBooking.status}
@@ -795,31 +797,39 @@ export default function AdminDashboard() {
             </div>
 
             {/* Actions Footer */}
-            <div className="p-5 border-t border-surface-border bg-background flex justify-end gap-3 shrink-0">
-               {viewingBooking.status === 'pending' && (
+            <div className="p-5 border-t border-surface-border bg-background flex justify-end gap-3 shrink-0 flex-wrap">
+               {(viewingBooking.status === 'pending' || viewingBooking.status === 'confirmed') && (
                  <>
+                  {viewingBooking.status === 'pending' && (
+                    <button 
+                      onClick={() => { updateBookingStatus(viewingBooking.id, 'rejected'); setViewingBooking(null); }}
+                      className="px-6 py-2.5 rounded-xl border border-red-500/30 text-red-500 font-bold hover:bg-red-500/10 transition-colors"
+                    >
+                      Reject Order
+                    </button>
+                  )}
                   <button 
-                    onClick={() => { updateBookingStatus(viewingBooking.id, 'rejected'); setViewingBooking(null); }}
-                    className="px-6 py-2.5 rounded-xl border border-red-500/30 text-red-500 font-bold hover:bg-red-500/10 transition-colors"
+                    onClick={() => { updateBookingStatus(viewingBooking.id, 'cancelled'); setViewingBooking(null); }}
+                    className="px-6 py-2.5 rounded-xl border border-surface-border text-foreground font-bold hover:bg-surface-border transition-colors"
                   >
-                    Reject Order
+                    Cancel Order
                   </button>
-                  <button 
-                    onClick={() => { updateBookingStatus(viewingBooking.id, 'confirmed'); setViewingBooking(null); }}
-                    className="px-6 py-2.5 rounded-xl bg-green-500 text-white font-bold hover:bg-green-600 transition-colors shadow-lg shadow-green-500/20 flex items-center gap-2"
-                  >
-                    <CheckCircle className="h-4 w-4" /> Approve Order
-                  </button>
+                  {viewingBooking.status === 'pending' && (
+                    <button 
+                      onClick={() => { updateBookingStatus(viewingBooking.id, 'confirmed'); setViewingBooking(null); }}
+                      className="px-6 py-2.5 rounded-xl bg-green-500 text-white font-bold hover:bg-green-600 transition-colors shadow-lg shadow-green-500/20 flex items-center gap-2"
+                    >
+                      <CheckCircle className="h-4 w-4" /> Approve Order
+                    </button>
+                  )}
                  </>
                )}
-               {viewingBooking.status !== 'pending' && (
-                 <button 
-                   onClick={() => setViewingBooking(null)}
-                   className="px-8 py-2.5 rounded-xl bg-surface border border-surface-border text-foreground font-bold hover:bg-surface-border transition-colors"
-                 >
-                   Done
-                 </button>
-               )}
+               <button 
+                 onClick={() => setViewingBooking(null)}
+                 className="px-8 py-2.5 rounded-xl bg-surface border border-surface-border text-foreground font-bold hover:bg-surface-border transition-colors ml-auto"
+               >
+                 Done
+               </button>
             </div>
           </div>
         </div>

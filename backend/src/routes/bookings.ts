@@ -51,6 +51,33 @@ router.get("/bookings", authenticateToken, async (req: Request, res: Response) =
   }
 });
 
+router.put("/bookings/:id/cancel", authenticateToken, async (req: Request, res: Response): Promise<void> => {
+  const user = (req as any).user;
+  const bookingId = req.params.id;
+
+  try {
+    const db = await getDb();
+    const booking = await db.get('SELECT * FROM bookings WHERE id = ? AND userId = ?', [bookingId, user.id]);
+
+    if (!booking) {
+      res.status(404).json({ message: "Booking not found" });
+      return;
+    }
+
+    if (booking.status === 'cancelled' || booking.status === 'rejected') {
+      res.status(400).json({ message: `Booking cannot be cancelled because it is already ${booking.status}` });
+      return;
+    }
+
+    await db.run('UPDATE bookings SET status = ? WHERE id = ?', ['cancelled', bookingId]);
+
+    res.json({ message: "Booking cancelled successfully" });
+  } catch (err) {
+    console.error("Cancel Booking Error:", err);
+    res.status(500).json({ message: "Error cancelling booking" });
+  }
+});
+
 router.post("/bookings/:id/aadhaar/generate-otp", authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const { aadhaarNumber } = req.body;

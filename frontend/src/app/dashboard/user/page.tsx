@@ -115,6 +115,20 @@ export default function UserDashboard() {
     }
   };
 
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this booking? This action cannot be undone.")) return;
+    try {
+      await api.put(`/api/bookings/${bookingId}/cancel`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Booking cancelled");
+      (window as any).refreshUserDashboard?.();
+    } catch (error: any) {
+      console.error("Cancel error", error);
+      toast.error(error.response?.data?.message || "Failed to cancel booking");
+    }
+  };
+
   if (loading) {
     return <div className="flex-1 flex items-center justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
@@ -287,24 +301,35 @@ export default function UserDashboard() {
                         <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                           booking.status === 'confirmed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
                           booking.status === 'rejected' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
+                          booking.status === 'cancelled' ? 'bg-surface-border text-muted-foreground border-surface-border' :
                           'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
                         }`}>
                           {booking.status}
                         </span>
                         
-                        {booking.status === 'confirmed' && (
-                          booking.undertakingSigned === 1 ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">
-                              <Check className="h-3 w-3" /> Signed
-                            </span>
-                          ) : (
-                            <button 
-                              onClick={() => router.push(`/dashboard/user/undertaking/${booking.id}`)}
-                              className="text-[10px] font-bold bg-accent text-white px-3 py-1.5 rounded hover:bg-accent-hover transition-colors shadow-sm"
+                        {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            {booking.status === 'confirmed' && (
+                              booking.undertakingSigned === 1 ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">
+                                  <Check className="h-3 w-3" /> Signed
+                                </span>
+                              ) : (
+                                <button 
+                                  onClick={() => router.push(`/dashboard/user/undertaking/${booking.id}`)}
+                                  className="text-[10px] font-bold bg-accent text-white px-3 py-1.5 rounded hover:bg-accent-hover transition-colors shadow-sm"
+                                >
+                                  Sign Undertaking
+                                </button>
+                              )
+                            )}
+                            <button
+                              onClick={() => handleCancelBooking(booking.id)}
+                              className="text-[10px] font-bold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded border border-red-500/20 transition-colors"
                             >
-                              Sign Undertaking
+                              Cancel Booking
                             </button>
-                          )
+                          </div>
                         )}
                       </div>
                     </td>

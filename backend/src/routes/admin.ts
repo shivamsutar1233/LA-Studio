@@ -75,7 +75,7 @@ router.get("/bookings", authenticateToken, requireAdmin, async (req: Request, re
 router.put("/bookings/:id/status", authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { status } = req.body;
-    if (!['pending', 'confirmed', 'rejected'].includes(status)) {
+    if (!['pending', 'confirmed', 'rejected', 'cancelled'].includes(status)) {
       res.status(400).json({ message: "Invalid status" });
       return;
     }
