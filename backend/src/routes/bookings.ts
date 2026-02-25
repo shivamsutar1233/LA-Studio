@@ -69,7 +69,7 @@ router.put("/bookings/:id/cancel", authenticateToken, async (req: Request, res: 
       return;
     }
 
-    await db.run('UPDATE bookings SET status = ? WHERE id = ?', ['cancelled', bookingId]);
+    await db.run('UPDATE bookings SET status = ?, refundStatus = ? WHERE id = ?', ['cancelled', 'pending', bookingId]);
 
     res.json({ message: "Booking cancelled successfully" });
   } catch (err) {

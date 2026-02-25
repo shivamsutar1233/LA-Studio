@@ -174,6 +174,7 @@ export async function initDb(): Promise<DBAdapter> {
       undertakingSigned INTEGER DEFAULT 0,
       aadhaarNumber TEXT,
       aadhaarUrl TEXT,
+      refundStatus TEXT,
       FOREIGN KEY (userId) REFERENCES users(id)
     );
 
@@ -216,6 +217,17 @@ export async function initDb(): Promise<DBAdapter> {
     }
   }
 
+  // Migration for Refund Status
+  const hasRefundStatus = bookingsColumns.some((c: any) => c.name === 'refundStatus');
+  if (!hasRefundStatus) {
+    console.log("Migrating bookings table to include refundStatus field...");
+    try {
+      await dbAdapter!.exec(`ALTER TABLE bookings ADD COLUMN refundStatus TEXT;`);
+    } catch (e) {
+      console.log("Migration warning (refundStatus):", e);
+    }
+  }
+
   // Migration for Phase 8: Schema Split for images
   const columns = await dbAdapter!.all("PRAGMA table_info(gears)");
   const hasImage = columns.some((c: any) => c.name === 'image');
@@ -251,6 +263,7 @@ export async function initDb(): Promise<DBAdapter> {
           undertakingSigned INTEGER DEFAULT 0,
           aadhaarNumber TEXT,
           aadhaarUrl TEXT,
+          refundStatus TEXT,
           FOREIGN KEY (userId) REFERENCES users(id),
           FOREIGN KEY (addressId) REFERENCES addresses(id)
         );
@@ -258,14 +271,14 @@ export async function initDb(): Promise<DBAdapter> {
 
       if (hasGearId) {
         const oldBookings = await dbAdapter!.all('SELECT * FROM bookings');
-        const stmt = await dbAdapter!.prepare('INSERT INTO bookings_new (id, userId, gearIds, startDate, endDate, status, customerName, createdAt, addressId, undertakingSigned, aadhaarNumber, aadhaarUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        const stmt = await dbAdapter!.prepare('INSERT INTO bookings_new (id, userId, gearIds, startDate, endDate, status, customerName, createdAt, addressId, undertakingSigned, aadhaarNumber, aadhaarUrl, refundStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         for (const b of oldBookings) {
           // If it's already a JSON array due to some partial migration, keep it, else wrap it
           let newGearIds = b.gearId;
           try { JSON.parse(newGearIds); } catch { newGearIds = JSON.stringify([b.gearId]); }
           // Handle cases where old Bookings didn't have AddressId
           const fallbackAddressId = b.addressId || null;
-          await stmt.run(b.id, b.userId, newGearIds, b.startDate, b.endDate, b.status, b.customerName, b.createdAt, fallbackAddressId, b.undertakingSigned || 0, b.aadhaarNumber || null, b.aadhaarUrl || null);
+          await stmt.run(b.id, b.userId, newGearIds, b.startDate, b.endDate, b.status, b.customerName, b.createdAt, fallbackAddressId, b.undertakingSigned || 0, b.aadhaarNumber || null, b.aadhaarUrl || null, b.refundStatus || null);
         }
         await stmt.finalize();
       } else {

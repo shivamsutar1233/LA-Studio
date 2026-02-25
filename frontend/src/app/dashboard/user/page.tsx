@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
-import { Package, CalendarRange, Clock, Edit2, Check, X, User as UserIcon, Mail, Loader2, RefreshCw } from 'lucide-react';
+import { Package, CalendarRange, Clock, Edit2, Check, X, User as UserIcon, Mail, Loader2, RefreshCw, CheckCircle, XCircle, Ban } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Booking {
@@ -15,6 +15,7 @@ interface Booking {
   status: string;
   createdAt: string;
   undertakingSigned: number;
+  refundStatus?: string | null;
 }
 
 interface GearDetails {
@@ -259,7 +260,8 @@ export default function UserDashboard() {
                   <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Booking ID</th>
                   <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Item</th>
                   <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dates</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status & Actions</th>
+                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
@@ -298,17 +300,32 @@ export default function UserDashboard() {
                     </td>
                     <td className="p-4 text-sm">
                       <div className="flex flex-col gap-2 items-start">
-                        <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                          booking.status === 'confirmed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
-                          booking.status === 'rejected' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
-                          booking.status === 'cancelled' ? 'bg-surface-border text-muted-foreground border-surface-border' :
-                          'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
-                        }`}>
-                          {booking.status}
-                        </span>
-                        
+                        {booking.status === 'cancelled' ? (
+                          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                            booking.refundStatus === 'processed' 
+                              ? 'bg-green-500/10 text-green-500 border-green-500/20' 
+                              : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                          }`}>
+                            {booking.refundStatus === 'processed' ? <CheckCircle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                            <span>Refund {booking.refundStatus === 'processed' ? 'Processed' : 'Pending'}</span>
+                          </div>
+                        ) : (
+                          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                            booking.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                            booking.status === 'rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                            'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                          }`}>
+                            {booking.status === 'confirmed' && <CheckCircle className="h-3.5 w-3.5" />}
+                            {booking.status === 'rejected' && <XCircle className="h-3.5 w-3.5" />}
+                            {booking.status === 'pending' && <Clock className="h-3.5 w-3.5" />}
+                            <span>{booking.status}</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4 flex items-center justify-end gap-2">
                         {(booking.status === 'pending' || booking.status === 'confirmed') && (
-                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <>
                             {booking.status === 'confirmed' && (
                               booking.undertakingSigned === 1 ? (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">
@@ -329,9 +346,8 @@ export default function UserDashboard() {
                             >
                               Cancel Booking
                             </button>
-                          </div>
+                          </>
                         )}
-                      </div>
                     </td>
                   </tr>
                   );

@@ -24,6 +24,7 @@ interface AdminBooking {
   undertakingSigned: number;
   aadhaarNumber?: string | null;
   aadhaarUrl?: string | null;
+  refundStatus?: string | null;
 }
 
 interface UserData {
@@ -45,7 +46,7 @@ interface GearData {
 export default function AdminDashboard() {
   const router = useRouter();
   const { user, token } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'bookings' | 'inventory' | 'users'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'inventory' | 'users' | 'refunds'>('bookings');
   
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [users, setUsers] = useState<UserData[]>([]);
@@ -215,6 +216,20 @@ export default function AdminDashboard() {
     }
   };
 
+  const processRefund = async (id: string) => {
+    if (!window.confirm("Are you sure you want to mark this refund as processed? This cannot be undone.")) return;
+    try {
+      await api.put(`/api/admin/bookings/${id}/refund`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Refund marked as processed");
+      loadAdminData();
+    } catch (error) {
+      console.error("Error processing refund", error);
+      toast.error("Failed to process refund");
+    }
+  };
+
 
   if (loading) {
     return <div className="flex-1 flex items-center justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
@@ -245,6 +260,12 @@ export default function AdminDashboard() {
             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'users' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Users Directory
+          </button>
+          <button 
+            onClick={() => setActiveTab('refunds')}
+            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'refunds' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            Cancelled & Refunds
           </button>
         </div>
       </div>
@@ -350,14 +371,22 @@ export default function AdminDashboard() {
                         </td>
                         <td className="p-4 text-sm text-foreground">{b.startDate} to {b.endDate}</td>
                         <td className="p-4 text-sm">
-                          <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                            b.status === 'confirmed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
-                            b.status === 'rejected' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
-                            b.status === 'cancelled' ? 'bg-surface-border text-muted-foreground border-surface-border' :
-                            'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
-                          }`}>
-                            {b.status}
-                          </span>
+                          {b.status === 'cancelled' ? (
+                            <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                              b.refundStatus === 'processed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
+                              'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+                            }`}>
+                              Refund {b.refundStatus === 'processed' ? 'Processed' : 'Pending'}
+                            </span>
+                          ) : (
+                            <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                              b.status === 'confirmed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
+                              b.status === 'rejected' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
+                              'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+                            }`}>
+                              {b.status}
+                            </span>
+                          )}
                         </td>
                         <td className="p-4 flex items-center justify-end gap-2">
                           <button onClick={() => setViewingBooking(b)} className="p-2 text-muted-foreground hover:text-accent bg-background rounded-lg border border-surface-border transition-colors group" title="View Order Details">
@@ -480,6 +509,76 @@ export default function AdminDashboard() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* CANCELLED & REFUNDS TAB */}
+      {activeTab === 'refunds' && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-foreground">Cancelled Orders & Refunds</h2>
+            <button 
+              onClick={() => (window as any).refreshAdminDashboard?.()}
+              disabled={isRefreshing}
+              className="p-2 mr-2 rounded-full hover:bg-surface border border-transparent hover:border-surface-border text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
+              title="Refresh Cancelled Orders"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-accent' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+          </div>
+
+          <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-surface-border bg-background/50">
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Order ID</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Customer</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Dates</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Refund Status</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-border">
+                  {bookings.filter(b => b.status === 'cancelled').length > 0 ? bookings.filter(b => b.status === 'cancelled').map((b) => (
+                    <tr key={b.id} className="hover:bg-background/30 transition-colors">
+                      <td className="p-4 text-sm font-mono text-muted-foreground">#{b.id}</td>
+                      <td className="p-4 text-sm font-medium text-foreground">
+                        {users.find(u => u.id === b.userId)?.name || b.customerDetails?.name || 'Guest Checkout'}
+                      </td>
+                      <td className="p-4 text-sm text-foreground">{b.startDate} to {b.endDate}</td>
+                      <td className="p-4 text-sm">
+                        <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                          b.refundStatus === 'processed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
+                          'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+                        }`}>
+                          {b.refundStatus === 'processed' ? 'Processed' : 'Pending'}
+                        </span>
+                      </td>
+                      <td className="p-4 flex items-center justify-end gap-2">
+                         <button onClick={() => setViewingBooking(b)} className="text-[10px] font-bold bg-surface border border-surface-border text-foreground px-3 py-1.5 rounded hover:bg-surface-border transition-colors">
+                           View Details
+                         </button>
+                         {b.refundStatus !== 'processed' && (
+                           <button 
+                             onClick={() => processRefund(b.id)} 
+                             className="text-[10px] font-bold bg-green-500 text-white px-3 py-1.5 rounded hover:bg-green-600 transition-colors flex items-center gap-1 shadow-sm"
+                           >
+                             <CheckCircle className="h-3 w-3" /> Mark Processed
+                           </button>
+                         )}
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No cancelled bookings require refunds.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
