@@ -42,7 +42,7 @@ interface GearData {
 export default function AdminDashboard() {
   const router = useRouter();
   const { user, token } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'bookings' | 'inventory'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'inventory' | 'users'>('bookings');
   
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [users, setUsers] = useState<UserData[]>([]);
@@ -228,6 +228,12 @@ export default function AdminDashboard() {
           >
             Inventory Management
           </button>
+          <button 
+            onClick={() => setActiveTab('users')}
+            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'users' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            Users Directory
+          </button>
         </div>
       </div>
 
@@ -263,9 +269,9 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Col: Master Booking Table */}
-            <div className="lg:col-span-2">
+          <div className="w-full">
+            {/* Master Booking Table */}
+            <div>
               <h2 className="text-xl font-bold text-foreground mb-4">Master Booking Ledger</h2>
               <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden overflow-x-auto shadow-sm">
                 <table className="w-full text-left border-collapse">
@@ -342,31 +348,11 @@ export default function AdminDashboard() {
                 </table>
               </div>
             </div>
-
-            {/* Right Col: Users List */}
-            <div className="lg:col-span-1">
-              <h2 className="text-xl font-bold text-foreground mb-4">User Directory</h2>
-              <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm divide-y divide-surface-border">
-                {users.length > 0 ? users.map((u) => (
-                  <div key={u.id} className="p-4 hover:bg-background/30 transition-colors flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-bold text-foreground">{u.name}</p>
-                      <p className="text-xs text-muted-foreground">{u.email}</p>
-                    </div>
-                    <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded border ${u.role === 'admin' ? 'bg-accent/10 border-accent/20 text-accent' : 'bg-surface-border text-muted-foreground'}`}>
-                      {u.role}
-                    </span>
-                  </div>
-                )) : (
-                  <div className="p-8 text-center text-sm text-muted-foreground">No users registered yet.</div>
-                )}
-              </div>
-            </div>
           </div>
         </>
       )}
 
-      {/* INVENTORY MANGEMENT TAB */}
+      {/* INVENTORY MANAGEMENT TAB */}
       {activeTab === 'inventory' && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-between mb-6">
@@ -412,6 +398,49 @@ export default function AdminDashboard() {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* USERS DIRECTORY TAB */}
+      {activeTab === 'users' && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-foreground">User Directory ({stats.totalUsers})</h2>
+          </div>
+
+          <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-surface-border bg-background/50">
+                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID</th>
+                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name / Email</th>
+                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Role</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-border">
+                {users.length > 0 ? users.map((u) => (
+                  <tr key={u.id} className="hover:bg-background/30 transition-colors">
+                    <td className="p-4 text-xs font-mono text-muted-foreground">#{u.id}</td>
+                    <td className="p-4">
+                      <p className="text-sm font-bold text-foreground">{u.name}</p>
+                      <p className="text-xs text-muted-foreground">{u.email}</p>
+                    </td>
+                    <td className="p-4 text-right flex justify-end">
+                      <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                        u.role === 'admin' ? 'bg-accent/10 border-accent/20 text-accent' : 'bg-surface-border text-muted-foreground'
+                      }`}>
+                        {u.role}
+                      </span>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={3} className="p-8 text-center text-sm text-muted-foreground">No users registered yet.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
