@@ -16,8 +16,8 @@ const port = process.env.PORT || 3001;
 
 const allowedOrigins = [
   "http://localhost:3000",
-  process.env.FRONTEND_URL,
-  process.env.NATIVE_FRONTEND_URL
+  "*.leananglestudio.shop",
+  "leananglestudio.shop",
 ].filter(Boolean);
 
 app.use(cors({
