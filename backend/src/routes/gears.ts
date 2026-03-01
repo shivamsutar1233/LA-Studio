@@ -28,17 +28,42 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/:id/booked-dates", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+
+    // Find all bookings that contain this gearId and are either confirmed or pending
+    // We check if the gearIds JSON array contains the specific ID
+    const bookings = await db.all(`
+      SELECT startDate, endDate 
+      FROM bookings 
+      WHERE status IN ('confirmed', 'pending') 
+        AND (gearIds LIKE ? OR gearIds LIKE ? OR gearIds LIKE ? OR gearIds = ?)
+    `, [
+      `%,"${req.params.id}",%`, // Middle of array
+      `["${req.params.id}",%`,  // Start of array
+      `%,"${req.params.id}"]`,  // End of array
+      `["${req.params.id}"]`    // Only element in array
+    ]);
+
+    res.json(bookings);
+  } catch (err) {
+    console.error("Error fetching booked dates:", err);
+    res.status(500).json({ message: "Error fetching booked dates for gear" });
+  }
+});
+
 router.post("/", authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { name, category, pricePerDay, thumbnail, images } = req.body;
     const db = await getDb();
     const newId = Math.random().toString(36).substr(2, 9);
-    
+
     await db.run(
       'INSERT INTO gears (id, name, category, pricePerDay, thumbnail, images) VALUES (?, ?, ?, ?, ?, ?)',
       [newId, name, category, pricePerDay, thumbnail || '', images || '[]']
     );
-    
+
     const newGear = await db.get('SELECT * FROM gears WHERE id = ?', newId);
     res.status(201).json({ message: "Gear created successfully", gear: newGear });
   } catch (err) {
@@ -51,12 +76,12 @@ router.put("/:id", authenticateToken, requireAdmin, async (req: Request, res: Re
   try {
     const { name, category, pricePerDay, thumbnail, images } = req.body;
     const db = await getDb();
-    
+
     await db.run(
       'UPDATE gears SET name = ?, category = ?, pricePerDay = ?, thumbnail = ?, images = ? WHERE id = ?',
       [name, category, pricePerDay, thumbnail || '', images || '[]', req.params.id]
     );
-    
+
     const updatedGear = await db.get('SELECT * FROM gears WHERE id = ?', req.params.id);
     if (!updatedGear) {
       res.status(404).json({ message: "Gear not found" });
@@ -73,7 +98,7 @@ router.delete("/:id", authenticateToken, requireAdmin, async (req: Request, res:
   try {
     const db = await getDb();
     const result = await db.run('DELETE FROM gears WHERE id = ?', req.params.id);
-    
+
     if (result.changes === 0) {
       res.status(404).json({ message: "Gear not found" });
     } else {

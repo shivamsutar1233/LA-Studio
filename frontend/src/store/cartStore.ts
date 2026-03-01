@@ -27,7 +27,10 @@ export const useCartStore = create<CartState>()(
     (set) => ({
       items: [],
       addToCart: (item) => set((state) => {
-        const existingIndex = state.items.findIndex(i => i.gearId === item.gearId);
+        // Only merge cart items if they are the exact same gear AND the exact same rental dates
+        const existingIndex = state.items.findIndex(
+          i => i.gearId === item.gearId && i.startDate === item.startDate && i.endDate === item.endDate
+        );
         if (existingIndex > -1) {
           const newItems = [...state.items];
           newItems[existingIndex].quantity += 1;
@@ -35,8 +38,8 @@ export const useCartStore = create<CartState>()(
         }
         return { items: [...state.items, { ...item, id: crypto.randomUUID(), quantity: 1 }] };
       }),
-      removeFromCart: (id) => set((state) => ({ 
-        items: state.items.filter((i) => i.id !== id) 
+      removeFromCart: (id) => set((state) => ({
+        items: state.items.filter((i) => i.id !== id)
       })),
       updateCartItemDates: (id, startDate, endDate, days) => set((state) => ({
         items: state.items.map((i) => i.id === id ? { ...i, startDate, endDate, days } : i)

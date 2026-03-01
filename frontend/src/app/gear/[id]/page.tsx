@@ -6,8 +6,10 @@ import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { ShieldCheck, CheckCircle2, Star, ArrowLeft, ShoppingCart, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
-import { differenceInDays, parseISO } from 'date-fns';
+import { differenceInDays, parseISO, addDays, format } from 'date-fns';
 import { toast } from 'sonner';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface GearDetail {
   id: string;
@@ -25,45 +27,82 @@ export default function GearDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  
+
   const [gear, setGear] = useState<GearDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [days, setDays] = useState(0);
+  const [bookedDates, setBookedDates] = useState<{ startDate: string, endDate: string }[]>([]);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(true);
 
   const addToCart = useCartStore((state) => state.addToCart);
 
   useEffect(() => {
     if (!id) return;
-    const fetchGear = async () => {
+    const fetchGearData = async () => {
+      setIsCheckingAvailability(true);
       try {
-        const response = await api.get(`/api/gears/${id}`);
-        setGear(response.data);
-        if (response.data.thumbnail) {
-          setSelectedImage(response.data.thumbnail);
+        const [gearRes, bookedRes] = await Promise.all([
+          api.get(`/api/gears/${id}`),
+          api.get(`/api/gears/${id}/booked-dates`)
+        ]);
+
+        setGear(gearRes.data);
+        if (gearRes.data.thumbnail) {
+          setSelectedImage(gearRes.data.thumbnail);
         }
+
+        setBookedDates(bookedRes.data || []);
       } catch (error) {
         console.error("Error fetching gear details:", error);
       } finally {
         setLoading(false);
+        setIsCheckingAvailability(false);
       }
     };
-    fetchGear();
+    fetchGearData();
   }, [id]);
 
   useEffect(() => {
     if (startDate && endDate) {
-      const start = parseISO(startDate);
-      const end = parseISO(endDate);
-      const diff = differenceInDays(end, start);
+      const diff = differenceInDays(endDate, startDate);
       setDays(diff > 0 ? diff : 0);
     } else {
       setDays(0);
     }
   }, [startDate, endDate]);
+
+  const hasOverlapWithBookedDates = () => {
+    if (!startDate || !endDate) return false;
+
+    // Check if the selected date range overlaps with any booked dates
+    return bookedDates.some(booking => {
+      const bStart = new Date(booking.startDate);
+      bStart.setHours(0, 0, 0, 0);
+      const bEnd = new Date(booking.endDate);
+      bEnd.setHours(0, 0, 0, 0);
+
+      const sDate = new Date(startDate);
+      sDate.setHours(0, 0, 0, 0);
+      const eDate = new Date(endDate);
+      eDate.setHours(0, 0, 0, 0);
+
+      return (
+        (sDate <= bEnd && eDate >= bStart) || // Standard overlap
+        (bStart >= sDate && bStart <= eDate)   // Booked starts within selected
+      );
+    });
+  };
+
+  const disabledDateRanges = bookedDates.map(b => ({
+    start: new Date(b.startDate),
+    end: new Date(b.endDate)
+  }));
+
+  const isUnavailable = hasOverlapWithBookedDates();
 
   const handleAddToCart = () => {
     if (!gear) return;
@@ -71,17 +110,25 @@ export default function GearDetailPage() {
       toast.error("Invalid Dates", { description: "Please select valid rental dates (at least 1 day)." });
       return;
     }
-    
+    if (isUnavailable) {
+      toast.error("Gear Unavailable", { description: "This gear is already booked for the selected dates." });
+      return;
+    }
+
+    // Format Date safely without timezone conversion issues
+    const safeStart = startDate ? format(startDate, 'yyyy-MM-dd') : '';
+    const safeEnd = endDate ? format(endDate, 'yyyy-MM-dd') : '';
+
     addToCart({
       gearId: gear.id,
       name: gear.name,
       category: gear.category,
       pricePerDay: gear.pricePerDay,
-      startDate,
-      endDate,
+      startDate: safeStart,
+      endDate: safeEnd,
       days
     });
-    
+
     toast.success("Added to Cart", { description: `${gear.name} has been added to your rental cart.` });
     router.push('/cart');
   };
@@ -113,7 +160,7 @@ export default function GearDetailPage() {
               <img src={selectedImage} alt={gear.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" />
             ) : (
               <div className="text-muted-foreground font-mono text-xl group-hover:scale-110 transition-transform duration-500 text-center px-4">
-                IMAGE: <br/>{gear.name}
+                IMAGE: <br />{gear.name}
               </div>
             )}
             {gear.category === 'Camera' && (
@@ -125,19 +172,19 @@ export default function GearDetailPage() {
           <div className="grid grid-cols-3 gap-4">
             {/* Always show the thumbnail as the first option if it exists */}
             {gear.thumbnail && (
-              <div 
+              <div
                 onClick={() => setSelectedImage(gear.thumbnail!)}
                 className={`aspect-square rounded-xl bg-surface border flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-accent ${selectedImage === gear.thumbnail ? 'border-accent ring-2 ring-accent/50 opacity-100' : 'border-surface-border opacity-70 hover:opacity-100'}`}
               >
                 <img src={gear.thumbnail} alt="Main Thumbnail" className="h-full w-full object-cover" />
               </div>
             )}
-            
+
             {/* Show remaining gallery images */}
             {gear.images && gear.images !== '[]' && (
               JSON.parse(gear.images).map((imgUrl: string, idx: number) => (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   onClick={() => setSelectedImage(imgUrl)}
                   className={`aspect-square rounded-xl bg-surface border flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-accent ${selectedImage === imgUrl ? 'border-accent ring-2 ring-accent/50 opacity-100' : 'border-surface-border opacity-70 hover:opacity-100'}`}
                 >
@@ -145,8 +192,8 @@ export default function GearDetailPage() {
                 </div>
               ))
             )}
-            
-             {/* Show placeholders if absolutely no images exist */}
+
+            {/* Show placeholders if absolutely no images exist */}
             {!gear.thumbnail && (!gear.images || gear.images === '[]') && (
               [1, 2, 3].map(i => (
                 <div key={i} className="aspect-square rounded-xl bg-surface border border-surface-border flex items-center justify-center text-xs text-muted-foreground font-mono hover:border-accent cursor-pointer transition-colors">
@@ -167,16 +214,16 @@ export default function GearDetailPage() {
               <Star className="h-4 w-4 fill-current" /> 4.9 (128 reviews)
             </div>
           </div>
-          
+
           <h1 className="text-4xl sm:text-5xl font-extrabold text-foreground mb-4 tracking-tight">
             {gear.name}
           </h1>
-          
+
           <div className="flex items-end gap-2 mb-8">
             <span className="text-5xl font-black text-foreground">₹{gear.pricePerDay}</span>
             <span className="text-muted-foreground mb-2 font-medium">/ day</span>
           </div>
-          
+
           <p className="text-lg text-muted-foreground leading-relaxed mb-8">
             {description}
           </p>
@@ -204,44 +251,119 @@ export default function GearDetailPage() {
 
           {/* Action Area: Date Picker & Add to Cart */}
           <div className="mt-auto border-t border-surface-border pt-8">
-            <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
-              <div>
+            <style jsx global>{`
+              .custom-datepicker {
+                background-color: var(--surface) !important;
+                border-color: var(--surface-border) !important;
+                border-radius: 1rem !important;
+                font-family: inherit !important;
+                color: var(--foreground) !important;
+                padding: 1rem !important;
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+              }
+              .react-datepicker__header {
+                background-color: transparent !important;
+                border-bottom: 1px solid var(--surface-border) !important;
+                padding-top: 0.5rem !important;
+              }
+              .react-datepicker__current-month, .react-datepicker__day-name {
+                color: var(--foreground) !important;
+                font-weight: bold !important;
+              }
+              .react-datepicker__day {
+                color: var(--foreground) !important;
+                border-radius: 0.5rem !important;
+                margin: 0.2rem !important;
+                transition: all 0.2s !important;
+              }
+              .react-datepicker__day:hover:not(.react-datepicker__day--disabled) {
+                background-color: var(--surface-border) !important;
+              }
+              .react-datepicker__day--selected, .react-datepicker__day--in-selecting-range, .react-datepicker__day--in-range {
+                background-color: var(--accent) !important;
+                color: white !important;
+              }
+              .react-datepicker__day--disabled {
+                color: var(--muted-foreground) !important;
+                opacity: 0.3 !important;
+                text-decoration: line-through !important;
+              }
+              .react-datepicker-popper[data-placement^="bottom"] .react-datepicker__triangle {
+                fill: var(--surface) !important;
+                color: var(--surface) !important;
+                stroke: var(--surface-border) !important;
+              }
+            `}</style>
+
+            <div className="grid grid-cols-2 gap-4 mb-6 relative z-10 w-full">
+              <div className="flex flex-col w-full">
                 <label className="block text-sm font-medium text-foreground mb-2">Start Date</label>
-                <input 
-                  type="date" 
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 rounded-xl border border-surface-border bg-surface text-foreground focus:ring-accent focus:border-accent"
-                />
+                <div className="relative w-full">
+                  <DatePicker
+                    selected={startDate}
+                    onChange={(date: Date | null) => {
+                      setStartDate(date);
+                      if (endDate && date && date > endDate) {
+                        setEndDate(null);
+                      }
+                    }}
+                    selectsStart
+                    startDate={startDate || undefined}
+                    endDate={endDate || undefined}
+                    minDate={new Date()}
+                    excludeDateIntervals={disabledDateRanges}
+                    placeholderText="Add Date"
+                    className="w-full px-4 py-3.5 rounded-xl border-2 border-surface-border bg-surface text-foreground font-medium focus:ring-0 focus:border-accent transition-colors shadow-sm text-center placeholder:text-muted-foreground/70"
+                    calendarClassName="custom-datepicker"
+                    wrapperClassName="w-full"
+                    dateFormat="MMM dd, yyyy"
+                  />
+                </div>
               </div>
-              <div>
+              <div className="flex flex-col w-full">
                 <label className="block text-sm font-medium text-foreground mb-2">End Date</label>
-                <input 
-                  type="date" 
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate || new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 rounded-xl border border-surface-border bg-surface text-foreground focus:ring-accent focus:border-accent"
-                />
+                <div className="relative w-full">
+                  <DatePicker
+                    selected={endDate}
+                    onChange={(date: Date | null) => setEndDate(date)}
+                    selectsEnd
+                    startDate={startDate || undefined}
+                    endDate={endDate || undefined}
+                    minDate={startDate || new Date()}
+                    excludeDateIntervals={disabledDateRanges}
+                    placeholderText="Add Date"
+                    className="w-full px-4 py-3.5 rounded-xl border-2 border-surface-border bg-surface text-foreground font-medium focus:ring-0 focus:border-accent transition-colors shadow-sm text-center placeholder:text-muted-foreground/70"
+                    calendarClassName="custom-datepicker"
+                    wrapperClassName="w-full"
+                    dateFormat="MMM dd, yyyy"
+                  />
+                </div>
               </div>
             </div>
 
-            {days > 0 && (
+            {isCheckingAvailability ? (
+              <div className="flex justify-center items-center py-4 mb-2 text-muted-foreground text-sm gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Checking availability...
+              </div>
+            ) : isUnavailable ? (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-500 px-4 py-3 rounded-xl mb-6 text-sm font-medium">
+                This gear is already booked for these dates. Please select different dates.
+              </div>
+            ) : days > 0 ? (
               <div className="flex justify-between items-center mb-6 px-4 py-3 bg-accent/10 rounded-xl text-accent font-medium">
                 <span>{days} Day Rental</span>
                 <span>Total: ₹{(gear.pricePerDay * days).toFixed(2)}</span>
               </div>
-            )}
+            ) : null}
 
-            <button 
+            <button
               onClick={handleAddToCart}
-              className={`w-full flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-lg ${
-                days > 0 ? 'bg-accent text-white hover:bg-accent-hover shadow-accent/20' : 'bg-surface-border text-muted-foreground cursor-not-allowed'
-              }`}
+              disabled={isUnavailable || isCheckingAvailability}
+              className={`w-full flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-lg ${days > 0 && !isUnavailable ? 'bg-accent text-white hover:bg-accent-hover shadow-accent/20' : 'bg-surface-border text-muted-foreground cursor-not-allowed'
+                }`}
             >
               <ShoppingCart className="h-5 w-5" />
-              {days > 0 ? 'Add to Rental Cart' : 'Select Dates to Rent'}
+              {isUnavailable ? 'Unavailable for Dates' : days > 0 ? 'Add to Rental Cart' : 'Select Dates to Rent'}
             </button>
           </div>
         </div>

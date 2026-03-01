@@ -6,7 +6,7 @@ const router = Router();
 
 router.post("/rentals", authenticateToken, async (req: Request, res: Response): Promise<void> => {
   const { gearId, startDate, endDate, customerDetails, cartItems, addressId } = req.body;
-  
+
   const user = (req as any).user;
   const userId = user.id;
 
@@ -15,16 +15,53 @@ router.post("/rentals", authenticateToken, async (req: Request, res: Response): 
 
   try {
     const db = await getDb();
+
+    // Validate overlapping dates for all gear items
+    let itemsToValidate = [];
+    if (cartItems && Array.isArray(cartItems)) {
+      itemsToValidate = cartItems;
+    } else if (gearId && startDate && endDate) {
+      const gearIdsArray = gearId.split(',').map((id: string) => id.trim());
+      itemsToValidate = gearIdsArray.map((id: string) => ({ id, startDate, endDate }));
+    }
+
+    for (const item of itemsToValidate) {
+      if (!item.id || !item.startDate || !item.endDate) continue;
+
+      const overlappingBookings = await db.all(`
+        SELECT startDate, endDate 
+        FROM bookings 
+        WHERE status IN ('confirmed', 'pending') 
+          AND (gearIds LIKE ? OR gearIds LIKE ? OR gearIds LIKE ? OR gearIds = ?)
+          AND (
+            (startDate <= ? AND endDate >= ?) OR
+            (startDate >= ? AND startDate <= ?)
+          )
+      `, [
+        `%,"${item.id}",%`, `["${item.id}",%`, `%,"${item.id}"]`, `["${item.id}"]`,
+        item.endDate, item.startDate,
+        item.startDate, item.endDate
+      ]);
+
+      if (overlappingBookings.length > 0) {
+        res.status(400).json({
+          message: "One or more gears are already booked for the selected dates",
+          gearId: item.id
+        });
+        return;
+      }
+    }
+
     const bookingId = Math.random().toString(36).substr(2, 9);
-    
+
     let finalGearIds;
     if (cartItems && Array.isArray(cartItems)) {
-        finalGearIds = JSON.stringify(cartItems);
+      finalGearIds = JSON.stringify(cartItems.map((item: any) => item.id || item.gearId));
     } else {
-        const gearIdsArray = gearId ? gearId.split(',').map((id: string) => id.trim()) : [];
-        finalGearIds = JSON.stringify(gearIdsArray);
+      const gearIdsArray = gearId ? gearId.split(',').map((id: string) => id.trim()) : [];
+      finalGearIds = JSON.stringify(gearIdsArray);
     }
-    
+
     await db.run(
       'INSERT INTO bookings (id, userId, gearIds, startDate, endDate, status, customerName, createdAt, addressId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [bookingId, userId, finalGearIds, startDate, endDate, 'pending', custName, createdAt, addressId || null]
@@ -37,6 +74,62 @@ router.post("/rentals", authenticateToken, async (req: Request, res: Response): 
   } catch (err) {
     console.error("Booking Error:", err);
     res.status(500).json({ message: "Error mapping booking" });
+  }
+});
+
+router.post("/validate-cart", async (req: Request, res: Response): Promise<void> => {
+  const { cartItems } = req.body;
+
+  if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+    res.json({ valid: true });
+    return;
+  }
+
+  try {
+    const db = await getDb();
+    const unavailableItems = [];
+
+    for (const item of cartItems) {
+      const id = item.id || item.gearId;
+      if (!id || !item.startDate || !item.endDate) continue;
+
+      const overlappingBookings = await db.all(`
+        SELECT startDate, endDate 
+        FROM bookings 
+        WHERE status IN ('confirmed', 'pending') 
+          AND (gearIds LIKE ? OR gearIds LIKE ? OR gearIds LIKE ? OR gearIds = ?)
+          AND (
+            (startDate <= ? AND endDate >= ?) OR
+            (startDate >= ? AND startDate <= ?)
+          )
+      `, [
+        `%,"${id}",%`, `["${id}",%`, `%,"${id}"]`, `["${id}"]`,
+        item.endDate, item.startDate,
+        item.startDate, item.endDate
+      ]);
+
+      if (overlappingBookings.length > 0) {
+        unavailableItems.push({
+          id,
+          name: item.name,
+          startDate: item.startDate,
+          endDate: item.endDate
+        });
+      }
+    }
+
+    if (unavailableItems.length > 0) {
+      res.status(400).json({
+        valid: false,
+        message: "Some items are not available for the selected dates.",
+        unavailableItems
+      });
+    } else {
+      res.json({ valid: true });
+    }
+  } catch (err) {
+    console.error("Validation Error:", err);
+    res.status(500).json({ message: "Error validating cart dates" });
   }
 });
 
@@ -91,7 +184,7 @@ router.post("/bookings/:id/aadhaar/generate-otp", authenticateToken, async (req:
 
     const db = await getDb();
     const booking = await db.get('SELECT * FROM bookings WHERE id = ? AND userId = ?', [bookingId, user.id]);
-    
+
     if (!booking || booking.status !== 'confirmed') {
       res.status(404).json({ message: "Booking not found or not eligible for undertaking" });
       return;
@@ -111,17 +204,17 @@ router.post("/bookings/:id/aadhaar/generate-otp", authenticateToken, async (req:
     }
 
     const response = await fetch(API_URL, {
-       method: "POST",
-       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
-       body: JSON.stringify({ id_number: aadhaarNumber })
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
+      body: JSON.stringify({ id_number: aadhaarNumber })
     });
-    
+
     const data = await response.json() as any;
-    
+
     if (response.ok && data.status_code === 200 && data.data?.client_id) {
-       res.json({ clientId: data.data.client_id, message: "OTP Sent Successfully" });
+      res.json({ clientId: data.data.client_id, message: "OTP Sent Successfully" });
     } else {
-       res.status(400).json({ message: data.message || "Failed to generate OTP from Aadhaar authority" });
+      res.status(400).json({ message: data.message || "Failed to generate OTP from Aadhaar authority" });
     }
 
   } catch (err) {
@@ -149,24 +242,24 @@ router.post("/bookings/:id/aadhaar/submit-otp", authenticateToken, async (req: R
     if (!API_KEY) {
       console.log(`[MOCK API] Verifying OTP: ${otp} for Client: ${clientId}`);
       if (otp !== '123456') {
-         res.status(400).json({ message: "Invalid Mock OTP. Please use 123456." });
-         return;
+        res.status(400).json({ message: "Invalid Mock OTP. Please use 123456." });
+        return;
       }
-      if (!aadhaarDetailsUrl) aadhaarDetailsUrl = "https://example.com/mock_kyc_document.pdf"; 
+      if (!aadhaarDetailsUrl) aadhaarDetailsUrl = "https://example.com/mock_kyc_document.pdf";
     } else {
       const response = await fetch(API_URL, {
-         method: "POST",
-         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
-         body: JSON.stringify({ client_id: clientId, otp })
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
+        body: JSON.stringify({ client_id: clientId, otp })
       });
-      
+
       const data = await response.json() as any;
-      
+
       if (response.ok && data.status_code === 200) {
-         if (!aadhaarDetailsUrl) aadhaarDetailsUrl = data.data?.profile_image || "verified_via_api";
+        if (!aadhaarDetailsUrl) aadhaarDetailsUrl = data.data?.profile_image || "verified_via_api";
       } else {
-         res.status(400).json({ message: data.message || "Invalid OTP or Verification Failed" });
-         return;
+        res.status(400).json({ message: data.message || "Invalid OTP or Verification Failed" });
+        return;
       }
     }
 
