@@ -14,7 +14,22 @@ import paymentRoutes from "./routes/payment";
 const app: Express = express();
 const port = process.env.PORT || 3001;
 
-app.use(cors());
+const allowedOrigins = [
+  process.env.FRONTEND_URL || "http://localhost:3000"
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    // For strictly browser-only frontend, you can remove the !origin check
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // ==========================================
