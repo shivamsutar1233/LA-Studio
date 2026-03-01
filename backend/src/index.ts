@@ -15,16 +15,21 @@ const app: Express = express();
 const port = process.env.PORT || 3001;
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL || "http://localhost:3000"
-];
+  "http://localhost:3000",
+  process.env.FRONTEND_URL,
+  process.env.NATIVE_FRONTEND_URL
+].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
-    // For strictly browser-only frontend, you can remove the !origin check
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) return callback(null, true);
+
+    // Check if the origin is in our allowed list or if it's a localhost origin
+    if (allowedOrigins.includes(origin) || origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
       callback(null, true);
     } else {
+      console.warn(`CORS blocked request from origin: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     }
   },
