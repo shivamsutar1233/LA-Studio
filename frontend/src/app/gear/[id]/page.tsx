@@ -1,8 +1,8 @@
 "use client";
 
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
 import api from '@/lib/api';
 import { ShieldCheck, CheckCircle2, Star, ArrowLeft, ShoppingCart, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
@@ -23,10 +23,13 @@ interface GearDetail {
   includes?: string[];
 }
 
-export default function GearDetailPage() {
+function GearDetailContent() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const searchParams = useSearchParams();
+  const type = searchParams.get('type') || 'gear';
+  const isBundle = type === 'bundle';
 
   const [gear, setGear] = useState<GearDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,9 +48,10 @@ export default function GearDetailPage() {
     const fetchGearData = async () => {
       setIsCheckingAvailability(true);
       try {
+        const endpoint = isBundle ? `/api/bundles/${id}` : `/api/gears/${id}`;
         const [gearRes, bookedRes] = await Promise.all([
-          api.get(`/api/gears/${id}`),
-          api.get(`/api/gears/${id}/booked-dates`)
+          api.get(endpoint),
+          api.get(`${endpoint}/booked-dates`)
         ]);
 
         setGear(gearRes.data);
@@ -121,8 +125,9 @@ export default function GearDetailPage() {
 
     addToCart({
       gearId: gear.id,
+      itemType: isBundle ? 'bundle' : 'gear',
       name: gear.name,
-      category: gear.category,
+      category: isBundle ? 'Curated Bundle' : gear.category,
       pricePerDay: gear.pricePerDay,
       startDate: safeStart,
       endDate: safeEnd,
@@ -148,10 +153,13 @@ export default function GearDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
-      <Link href="/catalog" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-accent transition-colors mb-8">
+      <button
+        onClick={() => router.back()}
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-accent transition-colors mb-8"
+      >
         <ArrowLeft className="h-4 w-4" />
         Back to Catalog
-      </Link>
+      </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
         {/* Images Column */}
@@ -164,9 +172,14 @@ export default function GearDetailPage() {
                 IMAGE: <br />{gear.name}
               </div>
             )}
-            {gear.category === 'Camera' && (
+            {gear.category && gear.category === 'Camera' && !isBundle && (
               <div className="absolute top-4 right-4 bg-background/60 dark:bg-surface-foreground/60 backdrop-blur-md px-3 py-1.5 rounded-xl text-sm font-bold text-foreground dark:text-background border border-surface-border/50 shadow-sm">
                 Premium Quality
+              </div>
+            )}
+            {isBundle && (
+              <div className="absolute top-4 right-4 bg-accent/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-sm font-bold text-white shadow-sm border border-accent">
+                Curated Kit
               </div>
             )}
           </div>
@@ -209,7 +222,7 @@ export default function GearDetailPage() {
         <div className="flex flex-col">
           <div className="flex items-center gap-3 mb-4">
             <span className="px-3 py-1 text-xs font-bold uppercase tracking-wider text-accent bg-accent/10 rounded-full">
-              {gear.category}
+              {isBundle ? 'Included Items' : gear.category}
             </span>
             <div className="flex items-center text-yellow-500 text-sm font-bold gap-1">
               <Star className="h-4 w-4 fill-current" /> 4.9 (128 reviews)
@@ -373,5 +386,13 @@ export default function GearDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function GearDetailPage() {
+  return (
+    <Suspense fallback={<div className="max-w-7xl mx-auto px-4 py-24 flex justify-center items-center text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+      <GearDetailContent />
+    </Suspense>
   );
 }

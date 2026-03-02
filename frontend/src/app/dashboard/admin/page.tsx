@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { Users, FileText, Activity, Plus, Edit2, Trash2, CheckCircle, XCircle, UploadCloud, Eye, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import Pagination from '@/components/ui/Pagination';
 
 interface AdminBooking {
   id: string;
   userId: string;
   gearIds: string; // JSON array string
+  bundleIds?: string; // JSON array string of bundle IDs
   startDate: string;
   endDate: string;
   status: string;
@@ -45,39 +47,66 @@ interface GearData {
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, token } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'bookings' | 'inventory' | 'users' | 'refunds'>('bookings');
-  
+
+  const initialTab = (searchParams.get('tab') as 'bookings' | 'inventory' | 'bundles' | 'users' | 'refunds') || 'bookings';
+  const [activeTab, setActiveTab] = useState<'bookings' | 'inventory' | 'bundles' | 'users' | 'refunds'>(initialTab);
+
+  const handleTabChange = (tab: 'bookings' | 'inventory' | 'bundles' | 'users' | 'refunds') => {
+    setActiveTab(tab);
+    setBookingsPage(1); setInventoryPage(1); setBundlesPage(1); setUsersPage(1); setRefundsPage(1);
+    router.push(`/dashboard/admin?tab=${tab}`);
+  };
+
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [users, setUsers] = useState<UserData[]>([]);
   const [gears, setGears] = useState<GearData[]>([]);
+  const [bundles, setBundles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [bookingsPage, setBookingsPage] = useState(1);
+  const [inventoryPage, setInventoryPage] = useState(1);
+  const [bundlesPage, setBundlesPage] = useState(1);
+  const [usersPage, setUsersPage] = useState(1);
+  const [refundsPage, setRefundsPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGear, setEditingGear] = useState<GearData | null>(null);
   const [viewingBooking, setViewingBooking] = useState<AdminBooking | null>(null);
-  
-  // Form State
+
   const [formData, setFormData] = useState({ name: '', category: 'Camera', pricePerDay: 0, thumbnail: '', images: '[]' });
   const [isUploading, setIsUploading] = useState(false);
+
+  // Bundle Modal State
+  const [isBundleModalOpen, setIsBundleModalOpen] = useState(false);
+  const [editingBundle, setEditingBundle] = useState<any | null>(null);
+  const [bundleFormData, setBundleFormData] = useState({ name: '', description: '', pricePerDay: 0, thumbnail: '', images: '[]', gearIds: '[]' });
 
   const loadAdminData = async (isManualRefresh = false) => {
     if (isManualRefresh) setIsRefreshing(true);
     try {
-      const [bookingsRes, gearsRes] = await Promise.all([
+      const [bookingsRes, gearsRes, bundlesRes] = await Promise.all([
         api.get('/api/admin/bookings', { headers: { Authorization: `Bearer ${token}` } }),
-        api.get('/api/gears')
+        api.get('/api/gears'),
+        api.get('/api/bundles')
       ]);
       setBookings(bookingsRes.data.bookings || []);
       setUsers(bookingsRes.data.users || []);
       setGears(gearsRes.data || []);
+      setBundles(bundlesRes.data || []);
     } catch (error) {
       console.error("Failed to fetch admin data", error);
     } finally {
-      if (isManualRefresh) setIsRefreshing(false);
-      else setLoading(false);
+      if (isManualRefresh) {
+        // Minimum delay to let the spin animation play smoothly
+        setTimeout(() => setIsRefreshing(false), 600);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -95,9 +124,9 @@ export default function AdminDashboard() {
       return;
     }
     loadAdminData();
-    
+
     (window as any).refreshAdminDashboard = () => loadAdminData(true);
-    
+
     return () => {
       delete (window as any).refreshAdminDashboard;
     }
@@ -105,13 +134,44 @@ export default function AdminDashboard() {
 
   const stats = useMemo(() => {
     return {
-      totalRevenue: bookings.length * 150, 
+      totalRevenue: bookings.length * 150,
       activeRentals: bookings.filter(b => b.status === 'confirmed').length,
       totalUsers: users.length,
       admins: users.filter(u => u.role === 'admin').length,
       totalGear: gears.length
     };
   }, [bookings, users, gears]);
+
+  const paginatedBookings = useMemo(() => {
+    const start = (bookingsPage - 1) * ITEMS_PER_PAGE;
+    return bookings.slice(start, start + ITEMS_PER_PAGE);
+  }, [bookings, bookingsPage]);
+  const totalBookingsPages = Math.ceil(bookings.length / ITEMS_PER_PAGE) || 1;
+
+  const paginatedGears = useMemo(() => {
+    const start = (inventoryPage - 1) * ITEMS_PER_PAGE;
+    return gears.slice(start, start + ITEMS_PER_PAGE);
+  }, [gears, inventoryPage]);
+  const totalGearsPages = Math.ceil(gears.length / ITEMS_PER_PAGE) || 1;
+
+  const paginatedBundles = useMemo(() => {
+    const start = (bundlesPage - 1) * ITEMS_PER_PAGE;
+    return bundles.slice(start, start + ITEMS_PER_PAGE);
+  }, [bundles, bundlesPage]);
+  const totalBundlesPages = Math.ceil(bundles.length / ITEMS_PER_PAGE) || 1;
+
+  const paginatedUsers = useMemo(() => {
+    const start = (usersPage - 1) * ITEMS_PER_PAGE;
+    return users.slice(start, start + ITEMS_PER_PAGE);
+  }, [users, usersPage]);
+  const totalUsersPages = Math.ceil(users.length / ITEMS_PER_PAGE) || 1;
+
+  const cancelledBookings = useMemo(() => bookings.filter(b => b.status === 'cancelled'), [bookings]);
+  const paginatedRefunds = useMemo(() => {
+    const start = (refundsPage - 1) * ITEMS_PER_PAGE;
+    return cancelledBookings.slice(start, start + ITEMS_PER_PAGE);
+  }, [cancelledBookings, refundsPage]);
+  const totalRefundsPages = Math.ceil(cancelledBookings.length / ITEMS_PER_PAGE) || 1;
 
   const openModal = (gear?: GearData) => {
     if (gear) {
@@ -127,7 +187,7 @@ export default function AdminDashboard() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'thumbnail' | 'images') => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    
+
     setIsUploading(true);
     try {
       if (field === 'thumbnail') {
@@ -148,7 +208,7 @@ export default function AdminDashboard() {
           });
           uploadedUrls.push(res.data.url);
         }
-        
+
         setFormData(prev => {
           const currentImages = JSON.parse(prev.images || '[]');
           const updatedImages = [...currentImages, ...uploadedUrls];
@@ -230,6 +290,47 @@ export default function AdminDashboard() {
     }
   };
 
+  const openBundleModal = (bundle?: any) => {
+    if (bundle) {
+      setEditingBundle(bundle);
+      setBundleFormData({ name: bundle.name, description: bundle.description, pricePerDay: bundle.pricePerDay, thumbnail: bundle.thumbnail || '', images: bundle.images || '[]', gearIds: bundle.gearIds || '[]' });
+    } else {
+      setEditingBundle(null);
+      setBundleFormData({ name: '', description: '', pricePerDay: 0, thumbnail: '', images: '[]', gearIds: '[]' });
+    }
+    setIsBundleModalOpen(true);
+  };
+
+  const handleBundleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingBundle) {
+        await api.put(`/api/bundles/${editingBundle.id}`, bundleFormData, { headers: { Authorization: `Bearer ${token}` } });
+        toast.success("Bundle updated successfully");
+      } else {
+        await api.post('/api/bundles', bundleFormData, { headers: { Authorization: `Bearer ${token}` } });
+        toast.success("New bundle created successfully");
+      }
+      setIsBundleModalOpen(false);
+      loadAdminData();
+    } catch (error) {
+      console.error("Error saving bundle", error);
+      toast.error("Failed to save bundle");
+    }
+  };
+
+  const deleteBundle = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this bundle permanently?")) return;
+    try {
+      await api.delete(`/api/bundles/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      toast.success("Bundle removed from catalog");
+      loadAdminData();
+    } catch (error) {
+      console.error("Error deleting bundle", error);
+      toast.error("Failed to delete bundle");
+    }
+  };
+
 
   if (loading) {
     return <div className="flex-1 flex items-center justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
@@ -243,26 +344,32 @@ export default function AdminDashboard() {
           <p className="text-muted-foreground">Manage your platform inventory, users, and all system bookings.</p>
         </div>
         <div className="flex bg-surface border border-surface-border p-1 rounded-xl">
-          <button 
-            onClick={() => setActiveTab('bookings')}
+          <button
+            onClick={() => handleTabChange('bookings')}
             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'bookings' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Overview & Bookings
           </button>
-          <button 
-            onClick={() => setActiveTab('inventory')}
+          <button
+            onClick={() => handleTabChange('inventory')}
             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'inventory' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Inventory Management
           </button>
-          <button 
-            onClick={() => setActiveTab('users')}
+          <button
+            onClick={() => handleTabChange('bundles')}
+            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'bundles' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            Bundles
+          </button>
+          <button
+            onClick={() => handleTabChange('users')}
             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'users' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Users Directory
           </button>
-          <button 
-            onClick={() => setActiveTab('refunds')}
+          <button
+            onClick={() => handleTabChange('refunds')}
             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'refunds' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Cancelled & Refunds
@@ -282,7 +389,7 @@ export default function AdminDashboard() {
               <p className="text-3xl font-black text-foreground">₹{stats.totalRevenue.toLocaleString()}</p>
               <span className="text-xs text-green-500 font-medium">Est. Lifecycle Value</span>
             </div>
-            
+
             <div className="bg-surface border border-surface-border rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4 text-muted-foreground">
                 <h3 className="font-semibold text-sm uppercase tracking-wider">Active Bookings</h3>
@@ -291,7 +398,7 @@ export default function AdminDashboard() {
               <p className="text-3xl font-black text-foreground">{stats.activeRentals}</p>
               <span className="text-xs text-muted-foreground">Platform-wide</span>
             </div>
-            
+
             <div className="bg-surface border border-surface-border rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4 text-muted-foreground">
                 <h3 className="font-semibold text-sm uppercase tracking-wider">Registered Users</h3>
@@ -307,7 +414,7 @@ export default function AdminDashboard() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-foreground">Master Booking Ledger</h2>
-                <button 
+                <button
                   onClick={() => (window as any).refreshAdminDashboard?.()}
                   disabled={isRefreshing}
                   className="p-2 mr-2 rounded-full hover:bg-surface border border-transparent hover:border-surface-border text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
@@ -330,80 +437,92 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-border">
-                    {bookings.length > 0 ? bookings.map((b) => {
-                      const gearListStr = b.gearIds ? (() => {
+                    {paginatedBookings.length > 0 ? paginatedBookings.map((b) => {
+                      const gearListStr = (() => {
                         try {
-                          const ids = JSON.parse(b.gearIds);
-                          if (Array.isArray(ids)) {
-                            return ids.map((item: any) => {
-                                if (typeof item === 'string') {
-                                    return gears.find(g => g.id === item)?.name || 'Unknown Gear';
-                                } else if (item && item.id) {
-                                    const qtyStr = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
-                                    return `${item.name}${qtyStr} (${item.days} days)`;
-                                }
-                                return 'Unknown Item';
-                            }).join(', ');
+                          let allIds: any[] = [];
+
+                          if (b.gearIds) {
+                            try {
+                              const gIds = JSON.parse(b.gearIds);
+                              if (Array.isArray(gIds)) allIds = [...allIds, ...gIds];
+                            } catch (e) { /* legacy */ allIds.push(b.gearIds); }
                           }
-                          return 'Invalid format';
-                        } catch(e) {
-                           return gears.find(g => g.id === b.gearIds)?.name || 'Legacy Gear Entry';
+
+                          if (b.bundleIds) {
+                            try {
+                              const bIds = JSON.parse(b.bundleIds);
+                              if (Array.isArray(bIds)) allIds = [...allIds, ...bIds];
+                            } catch (e) { }
+                          }
+
+                          if (allIds.length === 0) return 'No Items';
+
+                          return allIds.map((item: any) => {
+                            if (typeof item === 'string') {
+                              return gears.find(g => g.id === item)?.name || bundles.find(bd => bd.id === item)?.name || 'Unknown Item';
+                            } else if (item && item.id) {
+                              const qtyStr = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
+                              return `${item.name}${qtyStr} (${item.days} days)`;
+                            }
+                            return 'Unknown Item';
+                          }).join(', ');
+                        } catch (e) {
+                          return 'Error parsing items';
                         }
-                      })() : 'No Gear';
+                      })();
 
                       return (
-                      <tr key={b.id} className="hover:bg-background/30 transition-colors">
-                        <td className="p-4 text-sm font-mono text-muted-foreground">#{b.id}</td>
-                        <td className="p-4 text-sm font-medium text-foreground">
-                          <div className="flex items-center gap-2">
-                            {users.find(u => u.id === b.userId)?.name || b.customerDetails?.name || 'Guest Checkout'}
-                            {b.undertakingSigned === 1 && (
-                              <div title="Identity Verified & Undertaking Signed" className="h-4 w-4 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                                <CheckCircle className="h-3 w-3 text-green-500" />
-                              </div>
+                        <tr key={b.id} className="hover:bg-background/30 transition-colors">
+                          <td className="p-4 text-sm font-mono text-muted-foreground">#{b.id}</td>
+                          <td className="p-4 text-sm font-medium text-foreground">
+                            <div className="flex items-center gap-2">
+                              {users.find(u => u.id === b.userId)?.name || b.customerDetails?.name || 'Guest Checkout'}
+                              {b.undertakingSigned === 1 && (
+                                <div title="Identity Verified & Undertaking Signed" className="h-4 w-4 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                                  <CheckCircle className="h-3 w-3 text-green-500" />
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4 text-sm font-medium text-accent max-w-[200px]" title={gearListStr}>
+                            <div className="truncate">
+                              {gearListStr}
+                            </div>
+                          </td>
+                          <td className="p-4 text-sm text-foreground">{b.startDate} to {b.endDate}</td>
+                          <td className="p-4 text-sm">
+                            {b.status === 'cancelled' ? (
+                              <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${b.refundStatus === 'processed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
+                                'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+                                }`}>
+                                Refund {b.refundStatus === 'processed' ? 'Processed' : 'Pending'}
+                              </span>
+                            ) : (
+                              <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${b.status === 'confirmed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
+                                b.status === 'rejected' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
+                                  'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+                                }`}>
+                                {b.status}
+                              </span>
                             )}
-                          </div>
-                        </td>
-                        <td className="p-4 text-sm font-medium text-accent max-w-[200px]" title={gearListStr}>
-                          <div className="truncate">
-                            {gearListStr}
-                          </div>
-                        </td>
-                        <td className="p-4 text-sm text-foreground">{b.startDate} to {b.endDate}</td>
-                        <td className="p-4 text-sm">
-                          {b.status === 'cancelled' ? (
-                            <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                              b.refundStatus === 'processed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
-                              'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
-                            }`}>
-                              Refund {b.refundStatus === 'processed' ? 'Processed' : 'Pending'}
-                            </span>
-                          ) : (
-                            <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                              b.status === 'confirmed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
-                              b.status === 'rejected' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
-                              'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
-                            }`}>
-                              {b.status}
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-4 flex items-center justify-end gap-2">
-                          <button onClick={() => setViewingBooking(b)} className="p-2 text-muted-foreground hover:text-accent bg-background rounded-lg border border-surface-border transition-colors group" title="View Order Details">
-                            <Eye className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                          </button>
-                          {b.status === 'pending' && (
-                            <>
-                              <button onClick={() => updateBookingStatus(b.id, 'confirmed')} className="p-2 text-muted-foreground hover:text-green-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Accept Booking">
-                                <CheckCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                              </button>
-                              <button onClick={() => updateBookingStatus(b.id, 'rejected')} className="p-2 text-muted-foreground hover:text-red-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Reject Booking">
-                                <XCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                              </button>
-                            </>
-                          )}
-                        </td>
-                      </tr>
+                          </td>
+                          <td className="p-4 flex items-center justify-end gap-2">
+                            <button onClick={() => setViewingBooking(b)} className="p-2 text-muted-foreground hover:text-accent bg-background rounded-lg border border-surface-border transition-colors group" title="View Order Details">
+                              <Eye className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                            </button>
+                            {b.status === 'pending' && (
+                              <>
+                                <button onClick={() => updateBookingStatus(b.id, 'confirmed')} className="p-2 text-muted-foreground hover:text-green-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Accept Booking">
+                                  <CheckCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                </button>
+                                <button onClick={() => updateBookingStatus(b.id, 'rejected')} className="p-2 text-muted-foreground hover:text-red-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Reject Booking">
+                                  <XCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                </button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
                       );
                     }) : (
                       <tr>
@@ -413,6 +532,7 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
+              <Pagination currentPage={bookingsPage} totalPages={totalBookingsPages} onPageChange={setBookingsPage} />
             </div>
           </div>
         </>
@@ -423,12 +543,23 @@ export default function AdminDashboard() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-foreground">Gear Catalog ({stats.totalGear})</h2>
-            <button 
-              onClick={() => openModal()}
-              className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-xl font-bold hover:bg-accent-hover transition-colors shadow-md shadow-accent/20"
-            >
-              <Plus className="h-5 w-5" /> Add New Gear
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => (window as any).refreshAdminDashboard?.()}
+                disabled={isRefreshing}
+                className="p-2 rounded-full hover:bg-surface border border-transparent hover:border-surface-border text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
+                title="Refresh Inventory"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-accent' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+              <button
+                onClick={() => openModal()}
+                className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-xl font-bold hover:bg-accent-hover transition-colors shadow-md shadow-accent/20"
+              >
+                <Plus className="h-5 w-5" /> Add New Gear
+              </button>
+            </div>
           </div>
 
           <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm">
@@ -443,30 +574,106 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
-                {gears.map((g) => (
+                {paginatedGears.map((g) => (
                   <tr key={g.id} className="hover:bg-background/30 transition-colors">
                     <td className="p-4 text-xs font-mono text-muted-foreground">#{g.id}</td>
                     <td className="p-4 text-sm font-bold text-foreground flex items-center gap-3">
-                       <div className="h-8 w-8 rounded bg-background border border-surface-border shrink-0 flex items-center justify-center overflow-hidden">
-                          {g.thumbnail ? <img src={g.thumbnail} alt={g.name} className="h-full w-full object-cover opacity-50" /> : <span className="text-[8px] text-muted-foreground">IMG</span>}
-                       </div>
-                       {g.name}
+                      <div className="h-8 w-8 rounded bg-background border border-surface-border shrink-0 flex items-center justify-center overflow-hidden">
+                        {g.thumbnail ? <img src={g.thumbnail} alt={g.name} className="h-full w-full object-cover opacity-50" /> : <span className="text-[8px] text-muted-foreground">IMG</span>}
+                      </div>
+                      {g.name}
                     </td>
                     <td className="p-4 text-sm text-muted-foreground">{g.category}</td>
                     <td className="p-4 text-sm font-bold text-foreground">₹{g.pricePerDay}</td>
                     <td className="p-4 flex items-center justify-end gap-2">
-                       <button onClick={() => openModal(g)} className="p-2 text-muted-foreground hover:text-accent bg-background rounded-lg border border-surface-border transition-colors group" title="Edit Gear">
-                          <Edit2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                       </button>
-                       <button onClick={() => deleteGear(g.id)} className="p-2 text-muted-foreground hover:text-red-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Delete Gear">
-                          <Trash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                       </button>
+                      <button onClick={() => openModal(g)} className="p-2 text-muted-foreground hover:text-accent bg-background rounded-lg border border-surface-border transition-colors group" title="Edit Gear">
+                        <Edit2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                      </button>
+                      <button onClick={() => deleteGear(g.id)} className="p-2 text-muted-foreground hover:text-red-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Delete Gear">
+                        <Trash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <Pagination currentPage={inventoryPage} totalPages={totalGearsPages} onPageChange={setInventoryPage} />
+        </div>
+      )}
+
+      {/* BUNDLES MANAGEMENT TAB */}
+      {activeTab === 'bundles' && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-foreground">Bundles Catalog ({bundles.length})</h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => (window as any).refreshAdminDashboard?.()}
+                disabled={isRefreshing}
+                className="p-2 rounded-full hover:bg-surface border border-transparent hover:border-surface-border text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
+                title="Refresh Bundles"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-accent' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+              <button
+                onClick={() => openBundleModal()}
+                className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-xl font-bold hover:bg-accent-hover transition-colors shadow-md shadow-accent/20"
+              >
+                <Plus className="h-5 w-5" /> Create New Bundle
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-surface-border bg-background/50">
+                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID</th>
+                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bundle Name</th>
+                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gears Included</th>
+                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Price/Day</th>
+                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-border">
+                {paginatedBundles.map((b) => (
+                  <tr key={b.id} className="hover:bg-background/30 transition-colors">
+                    <td className="p-4 text-xs font-mono text-muted-foreground">#{b.id}</td>
+                    <td className="p-4 text-sm font-bold text-foreground flex items-center gap-3">
+                      <div className="h-8 w-8 rounded bg-background border border-surface-border shrink-0 flex items-center justify-center overflow-hidden">
+                        {b.thumbnail ? <img src={b.thumbnail} alt={b.name} className="h-full w-full object-cover opacity-50" /> : <span className="text-[8px] text-muted-foreground">IMG</span>}
+                      </div>
+                      {b.name}
+                    </td>
+                    <td className="p-4 text-sm text-muted-foreground">
+                      {(() => {
+                        try {
+                          return JSON.parse(b.gearIds).length + ' gears';
+                        } catch { return '0 gears'; }
+                      })()}
+                    </td>
+                    <td className="p-4 text-sm font-bold text-foreground">₹{b.pricePerDay}</td>
+                    <td className="p-4 flex items-center justify-end gap-2">
+                      <button onClick={() => openBundleModal(b)} className="p-2 text-muted-foreground hover:text-accent bg-background rounded-lg border border-surface-border transition-colors group" title="Edit Bundle">
+                        <Edit2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                      </button>
+                      <button onClick={() => deleteBundle(b.id)} className="p-2 text-muted-foreground hover:text-red-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Delete Bundle">
+                        <Trash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {bundles.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No bundles created yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <Pagination currentPage={bundlesPage} totalPages={totalBundlesPages} onPageChange={setBundlesPage} />
         </div>
       )}
 
@@ -475,6 +682,15 @@ export default function AdminDashboard() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-foreground">User Directory ({stats.totalUsers})</h2>
+            <button
+              onClick={() => (window as any).refreshAdminDashboard?.()}
+              disabled={isRefreshing}
+              className="p-2 rounded-full hover:bg-surface border border-transparent hover:border-surface-border text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
+              title="Refresh Users"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-accent' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
           </div>
 
           <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm">
@@ -487,7 +703,7 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
-                {users.length > 0 ? users.map((u) => (
+                {paginatedUsers.length > 0 ? paginatedUsers.map((u) => (
                   <tr key={u.id} className="hover:bg-background/30 transition-colors">
                     <td className="p-4 text-xs font-mono text-muted-foreground">#{u.id}</td>
                     <td className="p-4">
@@ -495,9 +711,8 @@ export default function AdminDashboard() {
                       <p className="text-xs text-muted-foreground">{u.email}</p>
                     </td>
                     <td className="p-4 text-right flex justify-end">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                        u.role === 'admin' ? 'bg-accent/10 border-accent/20 text-accent' : 'bg-surface-border text-muted-foreground'
-                      }`}>
+                      <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${u.role === 'admin' ? 'bg-accent/10 border-accent/20 text-accent' : 'bg-surface-border text-muted-foreground'
+                        }`}>
                         {u.role}
                       </span>
                     </td>
@@ -510,6 +725,7 @@ export default function AdminDashboard() {
               </tbody>
             </table>
           </div>
+          <Pagination currentPage={usersPage} totalPages={totalUsersPages} onPageChange={setUsersPage} />
         </div>
       )}
 
@@ -518,7 +734,7 @@ export default function AdminDashboard() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-foreground">Cancelled Orders & Refunds</h2>
-            <button 
+            <button
               onClick={() => (window as any).refreshAdminDashboard?.()}
               disabled={isRefreshing}
               className="p-2 mr-2 rounded-full hover:bg-surface border border-transparent hover:border-surface-border text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
@@ -542,7 +758,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-border">
-                  {bookings.filter(b => b.status === 'cancelled').length > 0 ? bookings.filter(b => b.status === 'cancelled').map((b) => (
+                  {paginatedRefunds.length > 0 ? paginatedRefunds.map((b) => (
                     <tr key={b.id} className="hover:bg-background/30 transition-colors">
                       <td className="p-4 text-sm font-mono text-muted-foreground">#{b.id}</td>
                       <td className="p-4 text-sm font-medium text-foreground">
@@ -550,25 +766,24 @@ export default function AdminDashboard() {
                       </td>
                       <td className="p-4 text-sm text-foreground">{b.startDate} to {b.endDate}</td>
                       <td className="p-4 text-sm">
-                        <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                          b.refundStatus === 'processed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
+                        <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${b.refundStatus === 'processed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
                           'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
-                        }`}>
+                          }`}>
                           {b.refundStatus === 'processed' ? 'Processed' : 'Pending'}
                         </span>
                       </td>
                       <td className="p-4 flex items-center justify-end gap-2">
-                         <button onClick={() => setViewingBooking(b)} className="text-[10px] font-bold bg-surface border border-surface-border text-foreground px-3 py-1.5 rounded hover:bg-surface-border transition-colors">
-                           View Details
-                         </button>
-                         {b.refundStatus !== 'processed' && (
-                           <button 
-                             onClick={() => processRefund(b.id)} 
-                             className="text-[10px] font-bold bg-green-500 text-white px-3 py-1.5 rounded hover:bg-green-600 transition-colors flex items-center gap-1 shadow-sm"
-                           >
-                             <CheckCircle className="h-3 w-3" /> Mark Processed
-                           </button>
-                         )}
+                        <button onClick={() => setViewingBooking(b)} className="text-[10px] font-bold bg-surface border border-surface-border text-foreground px-3 py-1.5 rounded hover:bg-surface-border transition-colors">
+                          View Details
+                        </button>
+                        {b.refundStatus !== 'processed' && (
+                          <button
+                            onClick={() => processRefund(b.id)}
+                            className="text-[10px] font-bold bg-green-500 text-white px-3 py-1.5 rounded hover:bg-green-600 transition-colors flex items-center gap-1 shadow-sm"
+                          >
+                            <CheckCircle className="h-3 w-3" /> Mark Processed
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )) : (
@@ -580,6 +795,7 @@ export default function AdminDashboard() {
               </table>
             </div>
           </div>
+          <Pagination currentPage={refundsPage} totalPages={totalRefundsPages} onPageChange={setRefundsPage} />
         </div>
       )}
 
@@ -591,26 +807,26 @@ export default function AdminDashboard() {
               <h3 className="text-xl font-bold text-foreground">{editingGear ? 'Edit Gear Item' : 'Add New Gear'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
-            
+
             <form onSubmit={handleGearSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-bold text-foreground mb-1">Item Name</label>
-                <input 
-                  type="text" 
-                  required 
+                <input
+                  type="text"
+                  required
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full rounded-xl border border-surface-border bg-surface px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent" 
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full rounded-xl border border-surface-border bg-surface px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                   placeholder="e.g. GoPro Hero 12 Black"
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-foreground mb-1">Category</label>
-                  <select 
+                  <select
                     value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full rounded-xl border border-surface-border bg-surface px-4 py-3 text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                   >
                     <option value="Camera">Camera</option>
@@ -621,13 +837,13 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-foreground mb-1">Price per Day (₹)</label>
-                  <input 
-                    type="number" 
-                    required 
+                  <input
+                    type="number"
+                    required
                     min="1"
                     value={formData.pricePerDay}
-                    onChange={(e) => setFormData({...formData, pricePerDay: parseInt(e.target.value) || 0})}
-                    className="w-full rounded-xl border border-surface-border bg-surface px-4 py-3 text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent" 
+                    onChange={(e) => setFormData({ ...formData, pricePerDay: parseInt(e.target.value) || 0 })}
+                    className="w-full rounded-xl border border-surface-border bg-surface px-4 py-3 text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                     placeholder="25"
                   />
                 </div>
@@ -642,11 +858,11 @@ export default function AdminDashboard() {
                   <label className="cursor-pointer flex-1 flex items-center justify-between rounded-xl border border-surface-border bg-surface px-4 py-3 text-foreground focus-within:border-accent focus-within:ring-1 focus-within:ring-accent hover:bg-surface-border transition-colors">
                     <span className="text-sm text-muted-foreground truncate flex-1">{formData.thumbnail || 'Select image file...'}</span>
                     <UploadCloud className="h-5 w-5 text-accent shrink-0 ml-2" />
-                    <input 
+                    <input
                       type="file"
                       accept="image/*"
                       onChange={(e) => handleFileUpload(e, 'thumbnail')}
-                      className="hidden" 
+                      className="hidden"
                     />
                   </label>
                 </div>
@@ -663,12 +879,12 @@ export default function AdminDashboard() {
                       <UploadCloud className="h-6 w-6 text-muted-foreground" />
                       <span className="text-sm font-medium">Click to upload multiple images</span>
                     </div>
-                    <input 
+                    <input
                       type="file"
                       accept="image/*"
                       multiple
                       onChange={(e) => handleFileUpload(e, 'images')}
-                      className="hidden" 
+                      className="hidden"
                     />
                   </label>
                   {formData.images !== '[]' && (
@@ -676,7 +892,7 @@ export default function AdminDashboard() {
                       {JSON.parse(formData.images).map((imgUrl: string, idx: number) => (
                         <div key={idx} className="relative h-12 w-12 shrink-0 group">
                           <img src={imgUrl} alt={`Gallery ${idx}`} className="h-full w-full rounded object-cover border border-surface-border" />
-                          <button 
+                          <button
                             type="button"
                             onClick={() => {
                               const imgs = JSON.parse(formData.images);
@@ -695,14 +911,14 @@ export default function AdminDashboard() {
               </div>
 
               <div className="pt-4 flex gap-3">
-                <button 
+                <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="flex-1 bg-surface text-foreground font-bold py-3 rounded-xl border border-surface-border hover:bg-surface-border transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={isUploading}
                   className="flex-1 bg-accent text-white font-bold py-3 rounded-xl hover:bg-accent-hover transition-colors shadow-lg shadow-accent/20 disabled:opacity-50"
@@ -715,11 +931,211 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Add / Edit Bundle Modal */}
+      {isBundleModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-background border border-surface-border rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-surface-border flex justify-between items-center bg-surface">
+              <h3 className="text-xl font-bold text-foreground">{editingBundle ? 'Edit Bundle' : 'Create New Bundle'}</h3>
+              <button onClick={() => setIsBundleModalOpen(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+
+            <form onSubmit={handleBundleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-foreground mb-1">Bundle Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={bundleFormData.name}
+                    onChange={(e) => setBundleFormData({ ...bundleFormData, name: e.target.value })}
+                    className="w-full rounded-xl border border-surface-border bg-surface px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                    placeholder="e.g. Creator Starter Kit"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-foreground mb-1">Price per Day (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={bundleFormData.pricePerDay}
+                    onChange={(e) => setBundleFormData({ ...bundleFormData, pricePerDay: parseInt(e.target.value) || 0 })}
+                    className="w-full rounded-xl border border-surface-border bg-surface px-4 py-3 text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                    placeholder="150"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-foreground mb-1">Description</label>
+                <textarea
+                  required
+                  value={bundleFormData.description}
+                  onChange={(e) => setBundleFormData({ ...bundleFormData, description: e.target.value })}
+                  className="w-full rounded-xl border border-surface-border bg-surface px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                  placeholder="Describe the kit and who it's for..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="border border-surface-border rounded-xl p-4 bg-surface">
+                <label className="block text-sm font-bold text-foreground mb-3">Select Gears for this Bundle</label>
+                <div className="max-h-40 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2 pr-2">
+                  {gears.map(gear => {
+                    const isSelected = (() => {
+                      try { return JSON.parse(bundleFormData.gearIds).includes(gear.id); }
+                      catch { return false; }
+                    })();
+                    return (
+                      <label key={gear.id} className="flex items-center gap-3 p-2 rounded hover:bg-background cursor-pointer border border-transparent hover:border-surface-border transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            let current = [];
+                            try { current = JSON.parse(bundleFormData.gearIds); } catch { }
+                            if (e.target.checked) {
+                              setBundleFormData({ ...bundleFormData, gearIds: JSON.stringify([...current, gear.id]) });
+                            } else {
+                              setBundleFormData({ ...bundleFormData, gearIds: JSON.stringify(current.filter((id: string) => id !== gear.id)) });
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-surface-border text-accent focus:ring-accent accent-accent"
+                        />
+                        <div className="h-8 w-8 rounded bg-background shrink-0 flex items-center justify-center overflow-hidden">
+                          {gear.thumbnail ? <img src={gear.thumbnail} className="h-full w-full object-cover" /> : <span className="text-[8px] text-muted-foreground">IMG</span>}
+                        </div>
+                        <span className="text-sm font-semibold truncate leading-tight flex-1" title={gear.name}>{gear.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-foreground mb-1">Primary Thumbnail</label>
+                <div className="flex items-center gap-4">
+                  {bundleFormData.thumbnail && (
+                    <img src={bundleFormData.thumbnail} alt="Thumbnail preview" className="h-12 w-12 rounded object-cover border border-surface-border" />
+                  )}
+                  <label className="cursor-pointer flex-1 flex items-center justify-between rounded-xl border border-surface-border bg-surface px-4 py-3 text-foreground focus-within:border-accent focus-within:ring-1 focus-within:ring-accent hover:bg-surface-border transition-colors">
+                    <span className="text-sm text-muted-foreground truncate flex-1">{bundleFormData.thumbnail || 'Select image file...'}</span>
+                    <UploadCloud className="h-5 w-5 text-accent shrink-0 ml-2" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const files = e.target.files;
+                        if (!files || files.length === 0) return;
+                        setIsUploading(true);
+                        try {
+                          const formDataPayload = new FormData();
+                          formDataPayload.append('file', files[0]);
+                          const res = await api.post('/api/admin/upload', formDataPayload, { headers: { Authorization: `Bearer ${token}` } });
+                          setBundleFormData(prev => ({ ...prev, thumbnail: res.data.url }));
+                        } catch (err) { toast.error("Upload failed"); } finally { setIsUploading(false); }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-foreground mb-1 flex justify-between">
+                  <span>Additional Images (Gallery)</span>
+                  <span className="text-xs text-muted-foreground">{JSON.parse(bundleFormData.images || '[]').length} uploaded</span>
+                </label>
+                <div className="flex flex-col gap-2">
+                  <label className="cursor-pointer flex items-center justify-center w-full rounded-xl border border-dashed border-surface-border bg-surface px-4 py-6 text-foreground hover:border-accent hover:bg-surface-border transition-colors">
+                    <div className="flex flex-col items-center gap-2">
+                      <UploadCloud className="h-6 w-6 text-muted-foreground" />
+                      <span className="text-sm font-medium">Click to upload multiple images</span>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={async (e) => {
+                        const files = e.target.files;
+                        if (!files || files.length === 0) return;
+                        setIsUploading(true);
+                        try {
+                          const uploadedUrls: string[] = [];
+                          for (let i = 0; i < files.length; i++) {
+                            const formDataPayload = new FormData();
+                            formDataPayload.append('file', files[i]);
+                            const res = await api.post('/api/admin/upload', formDataPayload, {
+                              headers: { Authorization: `Bearer ${token}` }
+                            });
+                            uploadedUrls.push(res.data.url);
+                          }
+                          setBundleFormData(prev => {
+                            const currentImages = JSON.parse(prev.images || '[]');
+                            const updatedImages = [...currentImages, ...uploadedUrls];
+                            return { ...prev, images: JSON.stringify(updatedImages) };
+                          });
+                          toast.success(`Uploaded ${uploadedUrls.length} image(s)`);
+                        } catch (err) {
+                          toast.error("Upload failed");
+                        } finally {
+                          setIsUploading(false);
+                          e.target.value = '';
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  {bundleFormData.images !== '[]' && (
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {JSON.parse(bundleFormData.images).map((imgUrl: string, idx: number) => (
+                        <div key={idx} className="relative h-12 w-12 shrink-0 group">
+                          <img src={imgUrl} alt={`Gallery ${idx}`} className="h-full w-full rounded object-cover border border-surface-border" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const imgs = JSON.parse(bundleFormData.images);
+                              imgs.splice(idx, 1);
+                              setBundleFormData(prev => ({ ...prev, images: JSON.stringify(imgs) }));
+                            }}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow hidden group-hover:block"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-3 sticky bottom-0 bg-background py-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBundleModalOpen(false)}
+                  className="flex-1 bg-surface text-foreground font-bold py-3 rounded-xl border border-surface-border hover:bg-surface-border transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploading}
+                  className="flex-1 bg-accent text-white font-bold py-3 rounded-xl hover:bg-accent-hover transition-colors shadow-lg shadow-accent/20 disabled:opacity-50"
+                >
+                  {isUploading ? <><Loader2 className="h-5 w-5 animate-spin mr-2 inline" /> Uploading...</> : editingBundle ? 'Save Changes' : 'Create Bundle'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Order Details Modal Redesign */}
       {viewingBooking && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-surface border border-surface-border rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col max-h-[90vh]">
-            
+
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-surface-border flex justify-between items-center bg-background top-0 sticky z-10">
               <div className="flex items-center gap-4">
@@ -730,12 +1146,11 @@ export default function AdminDashboard() {
                   <h3 className="text-xl font-black text-foreground">Order Details</h3>
                   <p className="text-sm font-mono text-muted-foreground flex items-center gap-2">
                     ID: #{viewingBooking.id}
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                      viewingBooking.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${viewingBooking.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
                       viewingBooking.status === 'rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                      viewingBooking.status === 'cancelled' ? 'bg-surface-border text-muted-foreground border-surface-border' :
-                      'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                    }`}>
+                        viewingBooking.status === 'cancelled' ? 'bg-surface-border text-muted-foreground border-surface-border' :
+                          'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                      }`}>
                       {viewingBooking.status}
                     </span>
                   </p>
@@ -745,9 +1160,9 @@ export default function AdminDashboard() {
                 <XCircle className="h-6 w-6" />
               </button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-surface">
-              
+
               {/* Verification Banner */}
               <div className="w-full">
                 {viewingBooking.undertakingSigned === 1 ? (
@@ -791,7 +1206,7 @@ export default function AdminDashboard() {
                   <p className="text-lg font-black text-foreground truncate">{users.find(u => u.id === viewingBooking.userId)?.name || viewingBooking.customerDetails?.name || 'Guest Checkout'}</p>
                   <p className="text-sm text-muted-foreground truncate">{users.find(u => u.id === viewingBooking.userId)?.email || 'No email provided'}</p>
                 </div>
-                
+
                 {/* Delivery Card */}
                 <div className="bg-background border border-surface-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-2 mb-3">
@@ -800,8 +1215,8 @@ export default function AdminDashboard() {
                   </div>
                   {viewingBooking.deliveryAddress ? (
                     <div>
-                       <p className="font-bold text-foreground text-sm truncate">{viewingBooking.deliveryAddress.street}</p>
-                       <p className="text-sm text-muted-foreground truncate">{viewingBooking.deliveryAddress.city}, {viewingBooking.deliveryAddress.state} {viewingBooking.deliveryAddress.zip}</p>
+                      <p className="font-bold text-foreground text-sm truncate">{viewingBooking.deliveryAddress.street}</p>
+                      <p className="text-sm text-muted-foreground truncate">{viewingBooking.deliveryAddress.city}, {viewingBooking.deliveryAddress.state} {viewingBooking.deliveryAddress.zip}</p>
                     </div>
                   ) : (
                     <div className="h-full flex items-center">
@@ -835,30 +1250,43 @@ export default function AdminDashboard() {
                   <Activity className="h-5 w-5 text-accent" />
                   Included Equipment
                 </h4>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(() => {
                     let gearItems: any[] = [];
                     try {
-                      gearItems = JSON.parse(viewingBooking.gearIds);
-                      if (!Array.isArray(gearItems)) gearItems = [viewingBooking.gearIds];
-                    } catch {
-                      gearItems = [viewingBooking.gearIds];
-                    }
+                      if (viewingBooking.gearIds) {
+                        const parsedGears = JSON.parse(viewingBooking.gearIds);
+                        gearItems = gearItems.concat(Array.isArray(parsedGears) ? parsedGears : [viewingBooking.gearIds]);
+                      }
+                    } catch { gearItems.push(viewingBooking.gearIds); }
+
+                    try {
+                      if (viewingBooking.bundleIds) {
+                        const parsedBundles = JSON.parse(viewingBooking.bundleIds);
+                        gearItems = gearItems.concat(Array.isArray(parsedBundles) ? parsedBundles : [viewingBooking.bundleIds]);
+                      }
+                    } catch { }
 
                     return gearItems.map((item, idx) => {
                       const isObject = typeof item === 'object' && item !== null;
-                      const id = isObject ? item.id : item;
-                      const gear = gears.find(g => g.id === id);
-                      
+                      const dbId = isObject ? (item.gearId || item.id) : item;
+
+                      let isBundleItem = false;
+                      let gear = gears.find(g => g.id === dbId);
+                      if (!gear) {
+                        gear = bundles.find(b => b.id === dbId);
+                        if (gear) isBundleItem = true;
+                      }
+
                       const itemStartDate = isObject && item.startDate ? item.startDate : viewingBooking.startDate;
                       const itemEndDate = isObject && item.endDate ? item.endDate : viewingBooking.endDate;
-                      
+
                       const msPerDay = 1000 * 60 * 60 * 24;
                       let calcDays = 1;
                       if (itemStartDate && itemEndDate) {
-                         const diff = Math.ceil((new Date(itemEndDate).getTime() - new Date(itemStartDate).getTime()) / msPerDay);
-                         calcDays = diff > 0 ? diff : 0;
+                        const diff = Math.ceil((new Date(itemEndDate).getTime() - new Date(itemStartDate).getTime()) / msPerDay);
+                        calcDays = diff > 0 ? diff : 0;
                       }
                       const itemDays = isObject && item.days ? item.days : calcDays;
                       const itemPrice = isObject && item.pricePerDay ? item.pricePerDay : (gear?.pricePerDay || 0);
@@ -867,19 +1295,24 @@ export default function AdminDashboard() {
 
                       return (
                         <div key={idx} className="flex flex-col sm:flex-row gap-4 bg-surface border border-surface-border p-4 rounded-2xl hover:border-accent/30 transition-colors group">
-                          <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-xl bg-background border border-surface-border shrink-0 flex items-center justify-center overflow-hidden shadow-inner">
+                          <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-xl bg-background border border-surface-border shrink-0 flex items-center justify-center overflow-hidden shadow-inner relative">
                             {gear?.thumbnail ? <img src={gear.thumbnail} alt={gear.name || 'Gear'} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" /> : <span className="text-[10px] text-muted-foreground font-bold">NO IMG</span>}
                           </div>
                           <div className="flex-1 flex flex-col justify-between py-1">
                             <div>
-                              <p className="font-bold text-base text-foreground mb-1 leading-tight line-clamp-2">
-                                {isObject ? item.name : (gear?.name || 'Unknown Gear ID: ' + id)} 
-                              </p>
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-bold text-base text-foreground leading-tight line-clamp-2">
+                                  {isObject ? item.name : (gear?.name || 'Unknown Item ID: ' + dbId)}
+                                </p>
+                                {isBundleItem && (
+                                  <span className="bg-accent/10 text-accent text-[10px] font-bold px-2 py-0.5 rounded border border-accent/20">Bundle</span>
+                                )}
+                              </div>
                               <div className="inline-flex bg-background border border-surface-border rounded-lg px-2 py-1 text-xs font-bold text-muted-foreground">
                                 Qty: <span className="text-foreground ml-1">{itemQty}</span>
                               </div>
                             </div>
-                            
+
                             <div className="mt-3 flex items-end justify-between border-t border-surface-border/50 pt-2">
                               <div>
                                 <p className="text-xs text-muted-foreground font-medium mb-0.5">{itemDays} Days @ ₹{itemPrice}</p>
@@ -897,38 +1330,38 @@ export default function AdminDashboard() {
 
             {/* Actions Footer */}
             <div className="p-5 border-t border-surface-border bg-background flex justify-end gap-3 shrink-0 flex-wrap">
-               {(viewingBooking.status === 'pending' || viewingBooking.status === 'confirmed') && (
-                 <>
+              {(viewingBooking.status === 'pending' || viewingBooking.status === 'confirmed') && (
+                <>
                   {viewingBooking.status === 'pending' && (
-                    <button 
+                    <button
                       onClick={() => { updateBookingStatus(viewingBooking.id, 'rejected'); setViewingBooking(null); }}
                       className="px-6 py-2.5 rounded-xl border border-red-500/30 text-red-500 font-bold hover:bg-red-500/10 transition-colors"
                     >
                       Reject Order
                     </button>
                   )}
-                  <button 
+                  <button
                     onClick={() => { updateBookingStatus(viewingBooking.id, 'cancelled'); setViewingBooking(null); }}
                     className="px-6 py-2.5 rounded-xl border border-surface-border text-foreground font-bold hover:bg-surface-border transition-colors"
                   >
                     Cancel Order
                   </button>
                   {viewingBooking.status === 'pending' && (
-                    <button 
+                    <button
                       onClick={() => { updateBookingStatus(viewingBooking.id, 'confirmed'); setViewingBooking(null); }}
                       className="px-6 py-2.5 rounded-xl bg-green-500 text-white font-bold hover:bg-green-600 transition-colors shadow-lg shadow-green-500/20 flex items-center gap-2"
                     >
                       <CheckCircle className="h-4 w-4" /> Approve Order
                     </button>
                   )}
-                 </>
-               )}
-               <button 
-                 onClick={() => setViewingBooking(null)}
-                 className="px-8 py-2.5 rounded-xl bg-surface border border-surface-border text-foreground font-bold hover:bg-surface-border transition-colors ml-auto"
-               >
-                 Done
-               </button>
+                </>
+              )}
+              <button
+                onClick={() => setViewingBooking(null)}
+                className="px-8 py-2.5 rounded-xl bg-surface border border-surface-border text-foreground font-bold hover:bg-surface-border transition-colors ml-auto"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>

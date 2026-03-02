@@ -50,14 +50,25 @@ export default function CartPage() {
 
   useEffect(() => {
     const fetchBookings = async () => {
-      const uniqueGearIds = Array.from(new Set(cartItems.map(item => item.gearId)));
+      // Get unique combinations of id and type
+      const uniqueItemsDeduplicated = cartItems.reduce((acc, item) => {
+        const key = `${item.gearId}-${item.itemType || 'gear'}`;
+        if (!acc.has(key)) {
+          acc.set(key, { id: item.gearId, type: item.itemType || 'gear' });
+        }
+        return acc;
+      }, new Map()).values();
+
+      const uniqueItems = Array.from(uniqueItemsDeduplicated);
       const maps: Record<string, { start: Date, end: Date }[]> = {};
 
-      await Promise.all(uniqueGearIds.map(async (gid) => {
+      await Promise.all(uniqueItems.map(async (item: any) => {
+        const gid = item.id;
         try {
           // Only fetch if we haven't already
           if (!bookedDatesMap[gid]) {
-            const res = await api.get(`/api/gears/${gid}/booked-dates`);
+            const endpoint = item.type === 'bundle' ? `/api/bundles/${gid}` : `/api/gears/${gid}`;
+            const res = await api.get(`${endpoint}/booked-dates`);
             maps[gid] = res.data.map((b: any) => ({
               start: new Date(b.startDate),
               end: new Date(b.endDate)
@@ -216,7 +227,8 @@ export default function CartPage() {
                 endDate: item.endDate,
                 days: item.days,
                 pricePerDay: item.pricePerDay,
-                quantity: item.quantity
+                quantity: item.quantity,
+                itemType: item.itemType || 'gear'
               })),
               startDate: minDate,
               endDate: maxDate,

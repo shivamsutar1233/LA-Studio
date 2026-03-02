@@ -23,6 +23,18 @@ router.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         res.status(500).json({ message: "Error fetching gears" });
     }
 }));
+router.get("/featured", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const db = yield (0, database_1.getDb)();
+        // Fetch top 3 most premium gears based on pricePerDay
+        const featuredGear = yield db.all('SELECT * FROM gears ORDER BY pricePerDay DESC LIMIT 3');
+        res.json(featuredGear);
+    }
+    catch (err) {
+        console.error("Error fetching featured gear:", err);
+        res.status(500).json({ message: "Error fetching featured gear" });
+    }
+}));
 router.get("/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const db = yield (0, database_1.getDb)();

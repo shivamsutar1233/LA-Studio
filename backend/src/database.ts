@@ -76,7 +76,7 @@ export async function initDb(): Promise<DBAdapter> {
     // REMOTE TURSO SERVERLESS MODE
     // ------------------------------------------------------------------
     console.log("Connecting to Remote Turso Database...");
-    
+
     // Dynamically import libSql to prevent Windows C++ binding crashes locally when not using Turso
     const { createClient } = require('@libsql/client/web');
     tursoClient = createClient({ url, authToken });
@@ -92,21 +92,21 @@ export async function initDb(): Promise<DBAdapter> {
         return { changes: result.rowsAffected, lastID: result.lastInsertRowid };
       },
       all: async (sql: string, params?: any) => {
-         const args = Array.isArray(params) ? params : (params !== undefined ? [params] : []);
-         const result = await tursoClient!.execute({ sql, args });
-         return result.rows as unknown as any[];
+        const args = Array.isArray(params) ? params : (params !== undefined ? [params] : []);
+        const result = await tursoClient!.execute({ sql, args });
+        return result.rows as unknown as any[];
       },
       get: async (sql: string, params?: any) => {
-         const args = Array.isArray(params) ? params : (params !== undefined ? [params] : []);
-         const result = await tursoClient!.execute({ sql, args });
-         if (result.rows.length === 0) return undefined;
-         return result.rows[0] as unknown as any;
+        const args = Array.isArray(params) ? params : (params !== undefined ? [params] : []);
+        const result = await tursoClient!.execute({ sql, args });
+        if (result.rows.length === 0) return undefined;
+        return result.rows[0] as unknown as any;
       },
       prepare: async (sql: string) => {
-         return {
-           run: async (...args: any[]) => { await tursoClient!.execute({ sql, args }); },
-           finalize: async () => {}
-         };
+        return {
+          run: async (...args: any[]) => { await tursoClient!.execute({ sql, args }); },
+          finalize: async () => { }
+        };
       }
     };
   } else {
@@ -114,24 +114,24 @@ export async function initDb(): Promise<DBAdapter> {
     // LOCAL SQLITE FALLBACK MODE (Windows Safe)
     // ------------------------------------------------------------------
     console.log("Connecting to Local SQLite Database (Fallback)...");
-    
+
     // Ensure data directory exists
     const fs = require('fs');
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) { fs.mkdirSync(dir, { recursive: true }); }
-    
+
     localDb = await open({ filename: dbPath, driver: sqlite3.Database });
-    
+
     dbAdapter = {
       exec: async (sql: string) => { await localDb!.exec(sql); },
-      run: async (sql: string, params?: any) => { 
-        const result = await localDb!.run(sql, params); 
+      run: async (sql: string, params?: any) => {
+        const result = await localDb!.run(sql, params);
         return { changes: result.changes, lastID: result.lastID };
       },
       all: async (sql: string, params?: any) => { return await localDb!.all(sql, params); },
       get: async (sql: string, params?: any) => { return await localDb!.get(sql, params); },
-      prepare: async (sql: string) => { 
-        const stmt = await localDb!.prepare(sql); 
+      prepare: async (sql: string) => {
+        const stmt = await localDb!.prepare(sql);
         return {
           run: async (...args: any[]) => { await stmt.run(...args); },
           finalize: async () => { await stmt.finalize(); }
@@ -162,6 +162,16 @@ export async function initDb(): Promise<DBAdapter> {
       images TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS bundles (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      pricePerDay REAL NOT NULL,
+      thumbnail TEXT,
+      images TEXT,
+      gearIds TEXT NOT NULL -- JSON array of gear IDs
+    );
+
     CREATE TABLE IF NOT EXISTS bookings (
       id TEXT PRIMARY KEY,
       userId TEXT,
@@ -171,6 +181,7 @@ export async function initDb(): Promise<DBAdapter> {
       status TEXT NOT NULL DEFAULT 'confirmed',
       customerName TEXT,
       createdAt TEXT NOT NULL,
+      bundleIds TEXT DEFAULT '[]',
       undertakingSigned INTEGER DEFAULT 0,
       aadhaarNumber TEXT,
       aadhaarUrl TEXT,
@@ -190,8 +201,20 @@ export async function initDb(): Promise<DBAdapter> {
     );
   `);
 
+  // Migration for BundleIds in Bookings
+  let bookingsColumns = await dbAdapter!.all("PRAGMA table_info(bookings)");
+  const hasBundleIds = bookingsColumns.some((c: any) => c.name === 'bundleIds');
+  if (!hasBundleIds) {
+    console.log("Migrating bookings table to include bundleIds...");
+    try {
+      await dbAdapter!.exec(`ALTER TABLE bookings ADD COLUMN bundleIds TEXT DEFAULT '[]'`);
+    } catch (e) {
+      console.log("Migration warning (bundleIds):", e);
+    }
+  }
+
   // Migration for Phase 16: Add addressId to bookings
-  const bookingsColumns = await dbAdapter!.all("PRAGMA table_info(bookings)");
+  bookingsColumns = await dbAdapter!.all("PRAGMA table_info(bookings)");
   const hasAddressId = bookingsColumns.some((c: any) => c.name === 'addressId');
   if (!hasAddressId) {
     console.log("Migrating bookings table to include addressId...");
@@ -248,7 +271,7 @@ export async function initDb(): Promise<DBAdapter> {
     if (hasGearId || hasGearIdsFK) {
       console.log("Migrating bookings table to use pure gearIds array without FK constraints...");
       await dbAdapter!.exec('PRAGMA foreign_keys=OFF;');
-      
+
       await dbAdapter!.exec(`
         CREATE TABLE IF NOT EXISTS bookings_new (
           id TEXT PRIMARY KEY,
@@ -260,6 +283,7 @@ export async function initDb(): Promise<DBAdapter> {
           customerName TEXT,
           createdAt TEXT NOT NULL,
           addressId TEXT,
+          bundleIds TEXT DEFAULT '[]',
           undertakingSigned INTEGER DEFAULT 0,
           aadhaarNumber TEXT,
           aadhaarUrl TEXT,
@@ -271,14 +295,15 @@ export async function initDb(): Promise<DBAdapter> {
 
       if (hasGearId) {
         const oldBookings = await dbAdapter!.all('SELECT * FROM bookings');
-        const stmt = await dbAdapter!.prepare('INSERT INTO bookings_new (id, userId, gearIds, startDate, endDate, status, customerName, createdAt, addressId, undertakingSigned, aadhaarNumber, aadhaarUrl, refundStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        const stmt = await dbAdapter!.prepare('INSERT INTO bookings_new (id, userId, gearIds, startDate, endDate, status, customerName, createdAt, addressId, undertakingSigned, aadhaarNumber, aadhaarUrl, refundStatus, bundleIds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         for (const b of oldBookings) {
           // If it's already a JSON array due to some partial migration, keep it, else wrap it
           let newGearIds = b.gearId;
           try { JSON.parse(newGearIds); } catch { newGearIds = JSON.stringify([b.gearId]); }
           // Handle cases where old Bookings didn't have AddressId
           const fallbackAddressId = b.addressId || null;
-          await stmt.run(b.id, b.userId, newGearIds, b.startDate, b.endDate, b.status, b.customerName, b.createdAt, fallbackAddressId, b.undertakingSigned || 0, b.aadhaarNumber || null, b.aadhaarUrl || null, b.refundStatus || null);
+          const fallbackBundleIds = b.bundleIds || '[]';
+          await stmt.run(b.id, b.userId, newGearIds, b.startDate, b.endDate, b.status, b.customerName, b.createdAt, fallbackAddressId, b.undertakingSigned || 0, b.aadhaarNumber || null, b.aadhaarUrl || null, b.refundStatus || null, fallbackBundleIds);
         }
         await stmt.finalize();
       } else {
@@ -298,7 +323,7 @@ export async function initDb(): Promise<DBAdapter> {
   const gearCount = await dbAdapter!.get('SELECT COUNT(*) as count FROM gears');
   // Need to handle Turso row return specifically for the count query as it might come back as numeric or object depending on driver cast
   const countVal = gearCount ? (gearCount.count !== undefined ? gearCount.count : gearCount['COUNT(*)']) : 0;
-  
+
   if (countVal === 0) {
     console.log("Seeding initial gear data...");
     const stmt = await dbAdapter!.prepare('INSERT INTO gears (id, name, category, pricePerDay, thumbnail, images) VALUES (?, ?, ?, ?, ?, ?)');

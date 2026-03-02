@@ -5,7 +5,7 @@ import { authenticateToken } from "../middleware/authMiddleware";
 const router = Router();
 
 router.post("/rentals", authenticateToken, async (req: Request, res: Response): Promise<void> => {
-  const { gearId, startDate, endDate, customerDetails, cartItems, addressId } = req.body;
+  const { gearId, bundleId, startDate, endDate, customerDetails, cartItems, addressId } = req.body;
 
   const user = (req as any).user;
   const userId = user.id;
@@ -17,15 +17,52 @@ router.post("/rentals", authenticateToken, async (req: Request, res: Response): 
     const db = await getDb();
 
     // Validate overlapping dates for all gear items
-    let itemsToValidate = [];
+    let gearsToValidate: { id: string, startDate: string, endDate: string }[] = [];
+    let finalGearIds: string[] = [];
+    let finalBundleIds: string[] = [];
+
     if (cartItems && Array.isArray(cartItems)) {
-      itemsToValidate = cartItems;
-    } else if (gearId && startDate && endDate) {
-      const gearIdsArray = gearId.split(',').map((id: string) => id.trim());
-      itemsToValidate = gearIdsArray.map((id: string) => ({ id, startDate, endDate }));
+      for (const item of cartItems) {
+        const id = item.gearId || item.id || item.itemId;
+        const type = item.itemType || 'gear';
+        if (!id || !item.startDate || !item.endDate) continue;
+
+        if (type === 'bundle') {
+          finalBundleIds.push(id);
+          const bundle = await db.get('SELECT gearIds FROM bundles WHERE id = ?', id);
+          if (bundle) {
+            const bGearIds = JSON.parse(bundle.gearIds || '[]');
+            for (const gid of bGearIds) {
+              gearsToValidate.push({ id: gid, startDate: item.startDate, endDate: item.endDate });
+            }
+          }
+        } else {
+          finalGearIds.push(id);
+          gearsToValidate.push({ id, startDate: item.startDate, endDate: item.endDate });
+        }
+      }
+    } else {
+      if (gearId && startDate && endDate) {
+        const gearIdsArray = gearId.split(',').map((id: string) => id.trim());
+        finalGearIds.push(...gearIdsArray);
+        gearsToValidate.push(...gearIdsArray.map((id: string) => ({ id, startDate, endDate })));
+      }
+      if (bundleId && startDate && endDate) {
+        const bundleIdsArray = bundleId.split(',').map((id: string) => id.trim());
+        finalBundleIds.push(...bundleIdsArray);
+        for (const bid of bundleIdsArray) {
+          const bundle = await db.get('SELECT gearIds FROM bundles WHERE id = ?', bid);
+          if (bundle) {
+            const bGearIds = JSON.parse(bundle.gearIds || '[]');
+            for (const gid of bGearIds) {
+              gearsToValidate.push({ id: gid, startDate, endDate });
+            }
+          }
+        }
+      }
     }
 
-    for (const item of itemsToValidate) {
+    for (const item of gearsToValidate) {
       if (!item.id || !item.startDate || !item.endDate) continue;
 
       const overlappingBookings = await db.all(`
@@ -54,22 +91,14 @@ router.post("/rentals", authenticateToken, async (req: Request, res: Response): 
 
     const bookingId = Math.random().toString(36).substr(2, 9);
 
-    let finalGearIds;
-    if (cartItems && Array.isArray(cartItems)) {
-      finalGearIds = JSON.stringify(cartItems.map((item: any) => item.id || item.gearId));
-    } else {
-      const gearIdsArray = gearId ? gearId.split(',').map((id: string) => id.trim()) : [];
-      finalGearIds = JSON.stringify(gearIdsArray);
-    }
-
     await db.run(
-      'INSERT INTO bookings (id, userId, gearIds, startDate, endDate, status, customerName, createdAt, addressId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [bookingId, userId, finalGearIds, startDate, endDate, 'pending', custName, createdAt, addressId || null]
+      'INSERT INTO bookings (id, userId, gearIds, bundleIds, startDate, endDate, status, customerName, createdAt, addressId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [bookingId, userId, JSON.stringify(finalGearIds), JSON.stringify(finalBundleIds), startDate, endDate, 'pending', custName, createdAt, addressId || null]
     );
 
     res.status(201).json({
       message: "Rental booked successfully",
-      rental: { id: bookingId, userId, gearIds: finalGearIds, startDate, endDate, status: "pending", addressId },
+      rental: { id: bookingId, userId, gearIds: JSON.stringify(finalGearIds), bundleIds: JSON.stringify(finalBundleIds), startDate, endDate, status: "pending", addressId },
     });
   } catch (err) {
     console.error("Booking Error:", err);
@@ -89,10 +118,27 @@ router.post("/validate-cart", async (req: Request, res: Response): Promise<void>
     const db = await getDb();
     const unavailableItems = [];
 
+    let gearsToValidate: { id: string, originalId: string, name: string, startDate: string, endDate: string }[] = [];
+
     for (const item of cartItems) {
-      const id = item.id || item.gearId;
+      const id = item.gearId || item.id || item.itemId;
+      const type = item.itemType || 'gear';
       if (!id || !item.startDate || !item.endDate) continue;
 
+      if (type === 'bundle') {
+        const bundle = await db.get('SELECT gearIds FROM bundles WHERE id = ?', id);
+        if (bundle) {
+          const bGearIds = JSON.parse(bundle.gearIds || '[]');
+          for (const gid of bGearIds) {
+            gearsToValidate.push({ id: gid, originalId: id, name: item.name + ' (Bundle Component)', startDate: item.startDate, endDate: item.endDate });
+          }
+        }
+      } else {
+        gearsToValidate.push({ id, originalId: id, name: item.name, startDate: item.startDate, endDate: item.endDate });
+      }
+    }
+
+    for (const item of gearsToValidate) {
       const overlappingBookings = await db.all(`
         SELECT startDate, endDate 
         FROM bookings 
@@ -103,18 +149,22 @@ router.post("/validate-cart", async (req: Request, res: Response): Promise<void>
             (startDate >= ? AND startDate <= ?)
           )
       `, [
-        `%,"${id}",%`, `["${id}",%`, `%,"${id}"]`, `["${id}"]`,
+        `%,"${item.id}",%`, `["${item.id}",%`, `%,"${item.id}"]`, `["${item.id}"]`,
         item.endDate, item.startDate,
         item.startDate, item.endDate
       ]);
 
       if (overlappingBookings.length > 0) {
-        unavailableItems.push({
-          id,
-          name: item.name,
-          startDate: item.startDate,
-          endDate: item.endDate
-        });
+        // If a bundle component is unavailable, mark the whole bundle (originalId) as unavailable
+        const existingErrorIndex = unavailableItems.findIndex(u => u.id === item.originalId);
+        if (existingErrorIndex === -1) {
+          unavailableItems.push({
+            id: item.originalId,
+            name: item.name,
+            startDate: item.startDate,
+            endDate: item.endDate
+          });
+        }
       }
     }
 

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ChevronRight, Video, ShieldCheck, Zap, MousePointerClick, Clock, Repeat, CheckCircle, Wrench, Sparkles, CreditCard, Star, Quote } from 'lucide-react';
 import FeaturedGearSection from '@/components/home/FeaturedGearSection';
+import FeaturedBundlesSection from '@/components/home/FeaturedBundlesSection';
 
 export default function Home() {
   return (
@@ -23,7 +24,7 @@ export default function Home() {
 
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-500 mb-6 max-w-4xl">
             Capture The Ride. <br className="hidden md:block" />
-            <span className="text-accent">Don't Buy The Gear.</span>
+            <span className="text-accent">Don&apos;t Buy The Gear.</span>
           </h1>
 
           <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mb-10 leading-relaxed">
@@ -114,82 +115,15 @@ export default function Home() {
               <div className="h-24 w-24 rounded-full bg-background border-4 border-accent flex items-center justify-center mb-8 shadow-lg shadow-accent/20">
                 <Repeat className="h-10 w-10 text-accent" />
               </div>
-              <h3 className="text-2xl font-bold text-foreground mb-4">3. Ride & Return</h3>
-              <p className="text-muted-foreground leading-relaxed">Capture epic footage on your trip. When you're done, simply pack it up and we'll handle the return shipping.</p>
+              <h3 className="text-2xl font-bold text-foreground mb-4">3. Ride &amp; Return</h3>
+              <p className="text-muted-foreground leading-relaxed">Capture epic footage on your trip. When you&apos;re done, simply pack it up and we&apos;ll handle the return shipping.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Premium Bundles Section */}
-      <section className="py-24 relative z-10 w-full">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-accent/5 rounded-full filter blur-[100px] pointer-events-none -z-10"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-panel mb-4 border-none">
-              <span className="text-xs font-bold text-accent tracking-wide uppercase">Best Value</span>
-            </div>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-foreground mb-4">Ready-to-Ride Kits</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">Save time and money with our complete, pre-configured bundles. Everything you need to start recording.</p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Combo 1 */}
-            <div className="glass-panel rounded-3xl p-8 flex flex-col md:flex-row gap-8 items-center group transition-all hover:-translate-y-1">
-              <div className="w-full md:w-2/5 aspect-square glass-panel !bg-surface/50 rounded-2xl flex items-center justify-center p-4">
-                <img src="https://ab2bbkrtuubturud.public.blob.vercel-storage.com/product_images/1770984180415-prmtt2t-Screenshot%202025-02-14%20173238.png" alt="DJI Action 5 Bundle" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
-              </div>
-              <div className="w-full md:w-3/5 flex flex-col">
-                <h3 className="text-2xl font-bold text-foreground mb-2">The Ultimate MotoVlog Kit</h3>
-                <p className="text-muted-foreground mb-6">DJI Action 5 Pro + Dual Mic Setup + Custom Chin Mount.</p>
-
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-center gap-2 text-sm text-surface-foreground"><CheckCircle className="h-4 w-4 text-accent" /> DJI Action 5 Pro Adventure Combo</li>
-                  <li className="flex items-center gap-2 text-sm text-surface-foreground"><CheckCircle className="h-4 w-4 text-accent" /> DJI Mic 2 (2 TX + 1 RX)</li>
-                  <li className="flex items-center gap-2 text-sm text-surface-foreground"><CheckCircle className="h-4 w-4 text-accent" /> RidePro Helmet Chin Mount</li>
-                </ul>
-
-                <div className="mt-auto flex items-center justify-between">
-                  <div>
-                    <span className="text-sm text-muted-foreground line-through mr-2">₹2500/day</span>
-                    <span className="text-2xl font-black text-foreground">₹2100<span className="text-sm font-normal text-muted-foreground">/day</span></span>
-                  </div>
-                  <Link href="/catalog?category=bundles" className="btn-liquid bg-background border border-surface-border px-6 py-2 rounded-xl font-bold text-sm text-foreground">
-                    <span className="relative z-10">Rent Bundle</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Combo 2 */}
-            <div className="glass-panel rounded-3xl p-8 flex flex-col md:flex-row gap-8 items-center group transition-all hover:-translate-y-1">
-              <div className="w-full md:w-2/5 aspect-square glass-panel !bg-surface/50 rounded-2xl flex items-center justify-center p-4">
-                <img src="https://ab2bbkrtuubturud.public.blob.vercel-storage.com/product_images/1771408139556-91d4ehi-Insta360%20x4.png" alt="Insta360 X4 Bundle" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
-              </div>
-              <div className="w-full md:w-3/5 flex flex-col">
-                <h3 className="text-2xl font-bold text-foreground mb-2">360° Perspective Pack</h3>
-                <p className="text-muted-foreground mb-6">Capture every angle with the Insta360 X4 + Invisible Selfie Stick + Handlebar Mount.</p>
-
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-center gap-2 text-sm text-surface-foreground"><CheckCircle className="h-4 w-4 text-accent" /> Insta360 X4 Camera</li>
-                  <li className="flex items-center gap-2 text-sm text-surface-foreground"><CheckCircle className="h-4 w-4 text-accent" /> 114cm Invisible Selfie Stick</li>
-                  <li className="flex items-center gap-2 text-sm text-surface-foreground"><CheckCircle className="h-4 w-4 text-accent" /> Heavy Duty Handlebar Mount</li>
-                </ul>
-
-                <div className="mt-auto flex items-center justify-between">
-                  <div>
-                    <span className="text-sm text-muted-foreground line-through mr-2">₹1900/day</span>
-                    <span className="text-2xl font-black text-foreground">₹1600<span className="text-sm font-normal text-muted-foreground">/day</span></span>
-                  </div>
-                  <Link href="/catalog?category=bundles" className="btn-liquid bg-background border border-surface-border px-6 py-2 rounded-xl font-bold text-sm text-foreground">
-                    <span className="relative z-10">Rent Bundle</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Premium Bundles Section - Dynamic Client Component */}
+      <FeaturedBundlesSection />
 
       {/* Why Choose Us Section */}
       <section className="py-24 bg-surface/10 relative z-10 border-y border-white/5">
@@ -233,7 +167,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-extrabold text-foreground mb-4">Trusted by Riders</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">Don't just take our word for it. See what fellow moto vloggers say about Lean Angle Studio.</p>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">Don&apos;t just take our word for it. See what fellow moto vloggers say about Lean Angle Studio.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -244,7 +178,7 @@ export default function Home() {
                 <Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" />
               </div>
               <p className="text-foreground leading-relaxed italic mb-8 relative z-10">
-                "Rented the Insta360 X4 for a weekend trip to Spiti Valley. The gear was spotless, batteries were fully charged, and the invisible selfie stick mount they provided worked flawlessly on my handlebars."
+                &quot;Rented the Insta360 X4 for a weekend trip to Spiti Valley. The gear was spotless, batteries were fully charged, and the invisible selfie stick mount they provided worked flawlessly on my handlebars.&quot;
               </p>
               <div className="flex items-center gap-4 border-t border-surface-border pt-6">
                 <div className="h-10 w-10 rounded-full bg-surface-border flex items-center justify-center font-bold text-muted-foreground">R</div>
@@ -262,7 +196,7 @@ export default function Home() {
                 <Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" />
               </div>
               <p className="text-foreground leading-relaxed italic mb-8 relative z-10">
-                "Saved me ₹40k! I was going to buy a GoPro just for one long ride, but renting from Lean Angle made so much more sense. The audio setup with the DJI mic was crystal clear even at 100kmph."
+                &quot;Saved me ₹40k! I was going to buy a GoPro just for one long ride, but renting from Lean Angle made so much more sense. The audio setup with the DJI mic was crystal clear even at 100kmph.&quot;
               </p>
               <div className="flex items-center gap-4 border-t border-surface-border pt-6">
                 <div className="h-10 w-10 rounded-full bg-surface-border flex items-center justify-center font-bold text-muted-foreground">A</div>
@@ -280,7 +214,7 @@ export default function Home() {
                 <Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" />
               </div>
               <p className="text-foreground leading-relaxed italic mb-8 relative z-10">
-                "The delivery was super fast and everything came in a rugged hard case. The chin mount they included was way better than the cheap plastic ones I've used before. Highly recommend!"
+                &quot;The delivery was super fast and everything came in a rugged hard case. The chin mount they included was way better than the cheap plastic ones I&apos;ve used before. Highly recommend!&quot;
               </p>
               <div className="flex items-center gap-4 border-t border-surface-border pt-6">
                 <div className="h-10 w-10 rounded-full bg-surface-border flex items-center justify-center font-bold text-muted-foreground">S</div>

@@ -161,6 +161,16 @@ function initDb() {
       images TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS bundles (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      pricePerDay REAL NOT NULL,
+      thumbnail TEXT,
+      images TEXT,
+      gearIds TEXT NOT NULL -- JSON array of gear IDs
+    );
+
     CREATE TABLE IF NOT EXISTS bookings (
       id TEXT PRIMARY KEY,
       userId TEXT,
@@ -170,6 +180,7 @@ function initDb() {
       status TEXT NOT NULL DEFAULT 'confirmed',
       customerName TEXT,
       createdAt TEXT NOT NULL,
+      bundleIds TEXT DEFAULT '[]',
       undertakingSigned INTEGER DEFAULT 0,
       aadhaarNumber TEXT,
       aadhaarUrl TEXT,
@@ -188,8 +199,20 @@ function initDb() {
       FOREIGN KEY (userId) REFERENCES users(id)
     );
   `);
+        // Migration for BundleIds in Bookings
+        let bookingsColumns = yield dbAdapter.all("PRAGMA table_info(bookings)");
+        const hasBundleIds = bookingsColumns.some((c) => c.name === 'bundleIds');
+        if (!hasBundleIds) {
+            console.log("Migrating bookings table to include bundleIds...");
+            try {
+                yield dbAdapter.exec(`ALTER TABLE bookings ADD COLUMN bundleIds TEXT DEFAULT '[]'`);
+            }
+            catch (e) {
+                console.log("Migration warning (bundleIds):", e);
+            }
+        }
         // Migration for Phase 16: Add addressId to bookings
-        const bookingsColumns = yield dbAdapter.all("PRAGMA table_info(bookings)");
+        bookingsColumns = yield dbAdapter.all("PRAGMA table_info(bookings)");
         const hasAddressId = bookingsColumns.some((c) => c.name === 'addressId');
         if (!hasAddressId) {
             console.log("Migrating bookings table to include addressId...");
@@ -255,6 +278,7 @@ function initDb() {
           customerName TEXT,
           createdAt TEXT NOT NULL,
           addressId TEXT,
+          bundleIds TEXT DEFAULT '[]',
           undertakingSigned INTEGER DEFAULT 0,
           aadhaarNumber TEXT,
           aadhaarUrl TEXT,
@@ -265,7 +289,7 @@ function initDb() {
       `);
                 if (hasGearId) {
                     const oldBookings = yield dbAdapter.all('SELECT * FROM bookings');
-                    const stmt = yield dbAdapter.prepare('INSERT INTO bookings_new (id, userId, gearIds, startDate, endDate, status, customerName, createdAt, addressId, undertakingSigned, aadhaarNumber, aadhaarUrl, refundStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                    const stmt = yield dbAdapter.prepare('INSERT INTO bookings_new (id, userId, gearIds, startDate, endDate, status, customerName, createdAt, addressId, undertakingSigned, aadhaarNumber, aadhaarUrl, refundStatus, bundleIds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
                     for (const b of oldBookings) {
                         // If it's already a JSON array due to some partial migration, keep it, else wrap it
                         let newGearIds = b.gearId;
@@ -277,7 +301,8 @@ function initDb() {
                         }
                         // Handle cases where old Bookings didn't have AddressId
                         const fallbackAddressId = b.addressId || null;
-                        yield stmt.run(b.id, b.userId, newGearIds, b.startDate, b.endDate, b.status, b.customerName, b.createdAt, fallbackAddressId, b.undertakingSigned || 0, b.aadhaarNumber || null, b.aadhaarUrl || null, b.refundStatus || null);
+                        const fallbackBundleIds = b.bundleIds || '[]';
+                        yield stmt.run(b.id, b.userId, newGearIds, b.startDate, b.endDate, b.status, b.customerName, b.createdAt, fallbackAddressId, b.undertakingSigned || 0, b.aadhaarNumber || null, b.aadhaarUrl || null, b.refundStatus || null, fallbackBundleIds);
                     }
                     yield stmt.finalize();
                 }

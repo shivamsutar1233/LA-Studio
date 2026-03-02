@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 export interface CartItem {
   id: string; // unique cart entry ID
   gearId: string;
+  itemType?: 'gear' | 'bundle';
   name: string;
   category: string;
   pricePerDay: number;
@@ -28,9 +29,9 @@ export const useCartStore = create<CartState>()(
     (set) => ({
       items: [],
       addToCart: (item) => set((state) => {
-        // Only merge cart items if they are the exact same gear AND the exact same rental dates
+        // Only merge cart items if they are the exact same gear/bundle AND the exact same rental dates
         const existingIndex = state.items.findIndex(
-          i => i.gearId === item.gearId && i.startDate === item.startDate && i.endDate === item.endDate
+          i => i.gearId === item.gearId && i.startDate === item.startDate && i.endDate === item.endDate && (i.itemType || 'gear') === (item.itemType || 'gear')
         );
         if (existingIndex > -1) {
           const newItems = [...state.items];

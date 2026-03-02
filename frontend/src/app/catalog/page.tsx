@@ -2,9 +2,10 @@
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import GearCard from "@/components/ui/GearCard";
-import { Filter, Loader2 } from "lucide-react";
+import BundleCard from "@/components/ui/BundleCard";
+import { Filter, Loader2, Package, Aperture } from "lucide-react";
 import api from '@/lib/api';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 interface GearParams {
   id: string;
@@ -17,11 +18,31 @@ interface GearParams {
 
 function CatalogContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const categoryParam = searchParams.get('category');
+
+  const initialTab = (searchParams.get('tab') as 'gears' | 'bundles') || 'gears';
+  const [entityType, setEntityType] = useState<'gears' | 'bundles'>(initialTab);
+
+  const handleTabChange = (tab: 'gears' | 'bundles') => {
+    setEntityType(tab);
+
+    // Create new URLSearchParams string to preserve other parameters like category
+    const current = new URLSearchParams(Array.from(searchParams.entries()));
+    current.set('tab', tab);
+
+    // Preserve existing category param if switching gears -> gears or if user wants bundle but had a category active
+    // If switching to bundles, maybe we should clear the category since bundles don't have them in the same way? 
+    // For now, let's keep it simple and just set the tab.
+    const search = current.toString();
+    const query = search ? `?${search}` : "";
+    router.push(`/catalog${query}`);
+  };
 
   const [activeCategory, setActiveCategory] = useState("All Gear");
   const [sortOrder, setSortOrder] = useState("Featured");
   const [gearItems, setGearItems] = useState<GearParams[]>([]);
+  const [bundleItems, setBundleItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,23 +63,28 @@ function CatalogContent() {
   }, [categoryParam]);
 
   useEffect(() => {
-    const fetchGear = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get('/api/gears');
-        setGearItems(response.data);
+        const [gearsRes, bundlesRes] = await Promise.all([
+          api.get('/api/gears'),
+          api.get('/api/bundles')
+        ]);
+        setGearItems(gearsRes.data);
+        setBundleItems(bundlesRes.data);
       } catch (error) {
-        console.error("Error fetching gear:", error);
+        console.error("Error fetching catalog data:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchGear();
+    fetchData();
   }, []);
 
-  const filteredGear = useMemo(() => {
-    let result = [...gearItems];
-    if (activeCategory !== "All Gear") {
-      result = result.filter(g => g.category === activeCategory);
+  const filteredItems = useMemo(() => {
+    let result = entityType === 'gears' ? [...gearItems] : [...bundleItems];
+
+    if (entityType === 'gears' && activeCategory !== "All Gear") {
+      result = (result as GearParams[]).filter(g => g.category === activeCategory);
     }
 
     switch (sortOrder) {
@@ -69,14 +95,11 @@ function CatalogContent() {
         result.sort((a, b) => b.pricePerDay - a.pricePerDay);
         break;
       case "Highest Rated":
-        // Mock rating sort since all have 4.9 in MVP
-        break;
       default:
-        // Featured
         break;
     }
     return result;
-  }, [activeCategory, sortOrder, gearItems]);
+  }, [entityType, activeCategory, sortOrder, gearItems, bundleItems]);
 
   return (
     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full">
@@ -86,8 +109,24 @@ function CatalogContent() {
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6 relative z-10">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-foreground mb-2">Gear Catalog</h1>
-          <p className="text-muted-foreground max-w-2xl">Browse our professional lineup of action cameras, audio equipment, and mounting solutions specifically tested for moto vlogging.</p>
+          <h1 className="text-4xl font-extrabold tracking-tight text-foreground mb-4">Catalog</h1>
+          <div className="flex bg-surface border border-surface-border p-1 rounded-xl w-max mb-4 shadow-sm">
+            <button
+              onClick={() => handleTabChange('gears')}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${entityType === 'gears' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <Aperture className="h-4 w-4" /> Individual Gear
+            </button>
+            <button
+              onClick={() => handleTabChange('bundles')}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${entityType === 'bundles' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <Package className="h-4 w-4" /> Curated Bundles
+            </button>
+          </div>
+          <p className="text-muted-foreground max-w-2xl">
+            {entityType === 'gears' ? "Browse our professional lineup of action cameras, audio equipment, and mounting solutions specifically tested for moto vlogging." : "Rent our complete, ready-to-shoot curated kits containing everything you need for your next adventure."}
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -104,28 +143,37 @@ function CatalogContent() {
         </div>
       </div>
 
-      {/* Category Pills */}
-      <div className="glass-panel rounded-2xl p-2 flex overflow-x-auto gap-3 pb-2 mb-8 scrollbar-hide shrink-0 w-full md:w-fit">
-        {["All Gear", "Camera", "Audio", "Mounts", "Accessories"].map(cat => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={`px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${activeCategory === cat
-              ? 'btn-liquid bg-accent text-white shadow-lg shadow-accent/20'
-              : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface/50'
-              }`}
-          >
-            <span className="relative z-10">{cat === "Camera" ? "Cameras" : cat}</span>
-          </button>
-        ))}
-      </div>
+      {/* Category Pills - Only show for Gears */}
+      {entityType === 'gears' && (
+        <div className="glass-panel rounded-2xl p-2 flex overflow-x-auto gap-3 pb-2 mb-8 scrollbar-hide shrink-0 w-full md:w-fit">
+          {["All Gear", "Camera", "Audio", "Mounts", "Accessories"].map(cat => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${activeCategory === cat
+                ? 'btn-liquid bg-accent text-white shadow-lg shadow-accent/20'
+                : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface/50'
+                }`}
+            >
+              <span className="relative z-10">{cat === "Camera" ? "Cameras" : cat}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-4">
         {loading ? (
           <div className="col-span-full py-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+        ) : filteredItems.length === 0 ? (
+          <div className="col-span-full py-20 flex flex-col items-center justify-center text-center">
+            <h3 className="text-xl font-bold text-foreground mb-2">No items found</h3>
+            <p className="text-muted-foreground">Try adjusting your filters or search criteria.</p>
+          </div>
         ) : (
-          filteredGear.map(gear => (
-            <GearCard key={gear.id} {...gear} />
+          filteredItems.map(item => (
+            entityType === 'gears'
+              ? <GearCard key={item.id} {...item as GearParams} />
+              : <BundleCard key={item.id} {...item} />
           ))
         )}
       </div>

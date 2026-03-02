@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 interface Booking {
   id: string;
   gearIds: string; // JSON array string
+  bundleIds?: string; // JSON array string
   startDate: string;
   endDate: string;
   status: string;
@@ -26,7 +27,7 @@ export default function UserDashboard() {
   const router = useRouter();
   const { user, token, login } = useAuthStore();
   const [bookings, setBookings] = useState<Booking[]>([]);
-  
+
   // Profile Editing State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState('');
@@ -62,15 +63,27 @@ export default function UserDashboard() {
         });
         setBookings(bookingsRes.data);
 
-        // Fetch Gear Details to map IDs to Names (In a real app, populate this on backend)
+        // Fetch Gear Details to map IDs to Names
         try {
-          const gearRes = await api.get('/api/gears');
+          const [gearRes, bundleRes] = await Promise.all([
+            api.get('/api/gears'),
+            api.get('/api/bundles')
+          ]);
+
           const gearMap: GearDetails = {};
+
           if (Array.isArray(gearRes.data)) {
             gearRes.data.forEach((g: any) => {
               gearMap[g.id] = { name: g.name, thumbnail: g.thumbnail };
             });
           }
+
+          if (Array.isArray(bundleRes.data)) {
+            bundleRes.data.forEach((b: any) => {
+              gearMap[b.id] = { name: b.name, thumbnail: b.thumbnail };
+            });
+          }
+
           setGearInfo(gearMap);
         } catch (gearErr) {
           console.error("Failed to fetch gear data for map:", gearErr);
@@ -80,18 +93,21 @@ export default function UserDashboard() {
         console.error("Failed to fetch dashboard data:", error);
         toast.error("Failed to load dashboard data.");
       } finally {
-        if (isRefresh) setIsRefreshing(false);
-        else setLoading(false);
+        if (isRefresh) {
+          setTimeout(() => setIsRefreshing(false), 600);
+        } else {
+          setLoading(false);
+        }
       }
     };
 
     fetchDashboardData();
-    
+
     // Attach to window so we can trigger it from outside the effect if needed
     (window as any).refreshUserDashboard = () => fetchDashboardData(true);
-    
+
     return () => {
-       delete (window as any).refreshUserDashboard;
+      delete (window as any).refreshUserDashboard;
     }
   }, [user, token, router, hasHydrated]);
 
@@ -104,7 +120,7 @@ export default function UserDashboard() {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       login(res.data.user, res.data.token);
       setIsEditingProfile(false);
       toast.success('Profile updated successfully');
@@ -187,19 +203,19 @@ export default function UserDashboard() {
             <div className="space-y-4 flex-1 flex flex-col justify-center">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-1">Name</label>
-                <input 
-                  type="text" 
-                  value={editName} 
-                  onChange={(e) => setEditName(e.target.value)} 
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
                   className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                 />
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-1">Email</label>
-                <input 
-                  type="email" 
-                  value={editEmail} 
-                  onChange={(e) => setEditEmail(e.target.value)} 
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
                   className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                 />
               </div>
@@ -228,7 +244,7 @@ export default function UserDashboard() {
 
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-foreground">Rental History</h2>
-        <button 
+        <button
           onClick={() => (window as any).refreshUserDashboard?.()}
           disabled={isRefreshing}
           className="p-2 mr-2 rounded-full hover:bg-surface border border-transparent hover:border-surface-border text-muted-foreground hover:text-foreground transition-all disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
@@ -238,13 +254,13 @@ export default function UserDashboard() {
           <span className="hidden sm:inline">Refresh</span>
         </button>
       </div>
-      
+
       {bookings.length === 0 ? (
         <div className="bg-surface border border-surface-border rounded-2xl p-12 text-center flex flex-col items-center justify-center">
           <CalendarRange className="h-12 w-12 text-muted-foreground/50 mb-4" />
           <h3 className="text-xl font-bold text-foreground mb-2">No rentals yet</h3>
           <p className="text-muted-foreground mb-6">You haven't booked any gear. Head over to the catalog to get started!</p>
-          <button 
+          <button
             onClick={() => router.push('/catalog')}
             className="px-6 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent-hover transition-colors"
           >
@@ -266,64 +282,75 @@ export default function UserDashboard() {
               </thead>
               <tbody className="divide-y divide-surface-border">
                 {bookings.map((booking) => {
-                  const gearListStr = booking.gearIds ? (() => {
+                  const gearListStr = (() => {
                     try {
-                      const ids = JSON.parse(booking.gearIds);
-                      if (Array.isArray(ids)) {
-                        return ids.map((item: any) => {
-                            if (typeof item === 'string') {
-                                return gearInfo[item]?.name || 'Unknown Gear';
-                            } else if (item && item.id) {
-                                const qtyStr = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
-                                return `${item.name}${qtyStr} (${item.days} days)`;
-                            }
-                            return 'Unknown Item';
-                        }).join(', ');
+                      let allIds: any[] = [];
+
+                      if (booking.gearIds) {
+                        try {
+                          const gIds = JSON.parse(booking.gearIds);
+                          if (Array.isArray(gIds)) allIds = [...allIds, ...gIds];
+                        } catch (e) { allIds.push(booking.gearIds); }
                       }
-                      return 'Invalid format';
-                    } catch(e) {
-                      // Fallback if migration hasn't converted old single UUIDs yet
-                      return gearInfo[booking.gearIds]?.name || 'Legacy Gear Entry';
+
+                      if (booking.bundleIds) {
+                        try {
+                          const bIds = JSON.parse(booking.bundleIds);
+                          if (Array.isArray(bIds)) allIds = [...allIds, ...bIds];
+                        } catch (e) { }
+                      }
+
+                      if (allIds.length === 0) return 'No Items';
+
+                      return allIds.map((item: any) => {
+                        if (typeof item === 'string') {
+                          return gearInfo[item]?.name || 'Unknown Item';
+                        } else if (item && item.id) {
+                          const qtyStr = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
+                          return `${item.name}${qtyStr} (${item.days} days)`;
+                        }
+                        return 'Unknown Item';
+                      }).join(', ');
+                    } catch (e) {
+                      return 'Error parsing items';
                     }
-                  })() : 'No Gear';
+                  })();
 
                   return (
-                  <tr key={booking.id} className="hover:bg-background/30 transition-colors">
-                    <td className="p-4 text-sm font-mono text-muted-foreground">#{booking.id}</td>
-                    <td className="p-4 text-sm font-bold text-foreground max-w-[200px]" title={gearListStr}>
-                      <div className="truncate">
-                        {gearListStr}
-                      </div>
-                    </td>
-                    <td className="p-4 text-sm text-foreground">
-                      {booking.startDate} &rarr; {booking.endDate}
-                    </td>
-                    <td className="p-4 text-sm">
-                      <div className="flex flex-col gap-2 items-start">
-                        {booking.status === 'cancelled' ? (
-                          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                            booking.refundStatus === 'processed' 
-                              ? 'bg-green-500/10 text-green-500 border-green-500/20' 
+                    <tr key={booking.id} className="hover:bg-background/30 transition-colors">
+                      <td className="p-4 text-sm font-mono text-muted-foreground">#{booking.id}</td>
+                      <td className="p-4 text-sm font-bold text-foreground max-w-[200px]" title={gearListStr}>
+                        <div className="truncate">
+                          {gearListStr}
+                        </div>
+                      </td>
+                      <td className="p-4 text-sm text-foreground">
+                        {booking.startDate} &rarr; {booking.endDate}
+                      </td>
+                      <td className="p-4 text-sm">
+                        <div className="flex flex-col gap-2 items-start">
+                          {booking.status === 'cancelled' ? (
+                            <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${booking.refundStatus === 'processed'
+                              ? 'bg-green-500/10 text-green-500 border-green-500/20'
                               : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                          }`}>
-                            {booking.refundStatus === 'processed' ? <CheckCircle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                            <span>Refund {booking.refundStatus === 'processed' ? 'Processed' : 'Pending'}</span>
-                          </div>
-                        ) : (
-                          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                            booking.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                            booking.status === 'rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                            'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                          }`}>
-                            {booking.status === 'confirmed' && <CheckCircle className="h-3.5 w-3.5" />}
-                            {booking.status === 'rejected' && <XCircle className="h-3.5 w-3.5" />}
-                            {booking.status === 'pending' && <Clock className="h-3.5 w-3.5" />}
-                            <span>{booking.status}</span>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4 flex items-center justify-end gap-2">
+                              }`}>
+                              {booking.refundStatus === 'processed' ? <CheckCircle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                              <span>Refund {booking.refundStatus === 'processed' ? 'Processed' : 'Pending'}</span>
+                            </div>
+                          ) : (
+                            <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${booking.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                              booking.status === 'rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                              }`}>
+                              {booking.status === 'confirmed' && <CheckCircle className="h-3.5 w-3.5" />}
+                              {booking.status === 'rejected' && <XCircle className="h-3.5 w-3.5" />}
+                              {booking.status === 'pending' && <Clock className="h-3.5 w-3.5" />}
+                              <span>{booking.status}</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 flex items-center justify-end gap-2">
                         {(booking.status === 'pending' || booking.status === 'confirmed') && (
                           <>
                             {booking.status === 'confirmed' && (
@@ -332,7 +359,7 @@ export default function UserDashboard() {
                                   <Check className="h-3 w-3" /> Signed
                                 </span>
                               ) : (
-                                <button 
+                                <button
                                   onClick={() => router.push(`/dashboard/user/undertaking/${booking.id}`)}
                                   className="text-[10px] font-bold bg-accent text-white px-3 py-1.5 rounded hover:bg-accent-hover transition-colors shadow-sm"
                                 >
@@ -348,8 +375,8 @@ export default function UserDashboard() {
                             </button>
                           </>
                         )}
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
