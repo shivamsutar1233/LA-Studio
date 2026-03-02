@@ -11,6 +11,7 @@ export interface CartItem {
   endDate: string;
   days: number;
   quantity: number;
+  thumbnail?: string;
 }
 
 interface CartState {

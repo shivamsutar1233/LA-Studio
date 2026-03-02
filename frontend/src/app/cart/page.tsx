@@ -273,7 +273,7 @@ export default function CartPage() {
         {/* Cart Items */}
         <div className="flex-1">
           {cartItems.length === 0 ? (
-            <div className="text-center py-24 bg-white/5 backdrop-blur-3xl rounded-2xl border border-white/10 shadow-xl shadow-black/20">
+            <div className="text-center py-24 bg-background/60 dark:bg-surface/40 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-3xl border border-surface-border/50 shadow-2xl transition-all hover:border-accent/30">
               <p className="text-muted-foreground mb-6 text-lg">Your cart is empty.</p>
               <Link href="/catalog" className="inline-flex items-center gap-2 bg-accent text-white px-8 py-3 rounded-xl font-bold hover:bg-accent-hover transition-colors">
                 Browse Gear
@@ -282,9 +282,22 @@ export default function CartPage() {
           ) : (
             <div className="space-y-6">
               {cartItems.map((item) => (
-                <div key={item.id} className="flex flex-col sm:flex-row gap-6 p-6 rounded-2xl bg-white/5 backdrop-blur-3xl border border-white/10 shadow-lg shadow-black/10 transition-all hover:border-accent/30 hover:bg-white/10">
-                  <div className="w-full sm:w-32 aspect-video sm:aspect-square bg-background rounded-xl border border-surface-border/50 flex items-center justify-center shrink-0">
-                    <span className="text-[10px] text-muted-foreground font-mono">IMG_100x100</span>
+                <div key={item.id} className="flex flex-col sm:flex-row gap-6 p-6 rounded-3xl bg-background/60 dark:bg-surface/40 backdrop-blur-2xl backdrop-saturate-[1.8] border border-surface-border/50 shadow-lg transition-all duration-500 hover:-translate-y-1 hover:border-accent/50 hover:shadow-xl hover:bg-background/80 dark:hover:bg-surface/60">
+                  <div className="w-full sm:w-40 aspect-video sm:aspect-[4/3] bg-surface/50 rounded-2xl border border-surface-border/50 flex items-center justify-center shrink-0 overflow-hidden relative">
+                    {item.thumbnail ? (
+                      <img
+                        src={item.thumbnail}
+                        alt={item.name}
+                        className="h-full w-full object-contain p-2"
+                        onError={(e) => {
+                          // Fallback to text if image fails to load
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement?.insertAdjacentHTML('beforeend', '<span class="text-[10px] text-muted-foreground font-mono">NO IMAGE</span>');
+                        }}
+                      />
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground font-mono">NO IMAGE</span>
+                    )}
                   </div>
 
                   <div className="flex flex-col flex-1">
@@ -412,7 +425,7 @@ export default function CartPage() {
 
             {/* Delivery Address Card */}
             {user && (
-              <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-2xl p-6 shadow-2xl shadow-black/20">
+              <div className="bg-background/60 dark:bg-surface/40 backdrop-blur-2xl backdrop-saturate-[1.8] border border-surface-border/50 rounded-3xl p-6 shadow-2xl transition-all duration-500 hover:border-accent/30">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-foreground">Delivery Address</h2>
                   {addresses.length > 0 && !isAddingAddress && (
@@ -462,7 +475,7 @@ export default function CartPage() {
             )}
 
             {/* Price Summary Card */}
-            <div className="sticky top-24 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-2xl p-6 shadow-2xl shadow-black/20">
+            <div className="sticky top-24 bg-background/60 dark:bg-surface/40 backdrop-blur-2xl backdrop-saturate-[1.8] border border-surface-border/50 rounded-3xl p-6 shadow-2xl transition-all duration-500 hover:border-accent/30">
               <h2 className="text-xl font-bold text-foreground mb-6">Order Summary</h2>
 
               <div className="space-y-4 mb-6">
@@ -484,10 +497,11 @@ export default function CartPage() {
                 <button
                   onClick={handleCheckout}
                   disabled={cartItems.length === 0 || isCheckingOut || isValidatingCart || cartValidationResult?.valid === false}
-                  className="w-full flex items-center justify-center gap-2 bg-accent text-white px-6 py-4 rounded-xl font-bold text-lg hover:bg-accent-hover transition-all active:scale-[0.98] shadow-lg shadow-accent/20 mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group/checkout relative overflow-hidden w-full flex items-center justify-center gap-2 bg-accent text-white px-6 py-4 rounded-2xl font-bold text-lg hover:shadow-[0_12px_25px_-6px_rgba(219,130,24,0.8)] shadow-[0_8px_20px_-6px_rgba(219,130,24,0.6)] transition-all duration-300 active:scale-[0.98] mb-4 disabled:opacity-50 disabled:cursor-not-allowed border border-accent/20"
                 >
-                  {isValidatingCart ? 'Validating...' : isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
-                  <ChevronRight className="h-5 w-5" />
+                  <div className="absolute inset-0 bg-white/20 translate-y-[100%] group-hover/checkout:translate-y-0 transition-transform duration-500 ease-in-out z-0"></div>
+                  <span className="relative z-10">{isValidatingCart ? 'Validating...' : isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}</span>
+                  <ChevronRight className="h-5 w-5 relative z-10" />
                 </button>
               ) : (
                 <Link

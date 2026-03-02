@@ -126,7 +126,8 @@ export default function GearDetailPage() {
       pricePerDay: gear.pricePerDay,
       startDate: safeStart,
       endDate: safeEnd,
-      days
+      days,
+      thumbnail: selectedImage || gear.thumbnail
     });
 
     toast.success("Added to Cart", { description: `${gear.name} has been added to your rental cart.` });
@@ -155,16 +156,16 @@ export default function GearDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
         {/* Images Column */}
         <div className="flex flex-col gap-4">
-          <div className="aspect-square w-full rounded-2xl bg-surface border border-surface-border flex items-center justify-center relative overflow-hidden group">
+          <div className="aspect-square w-full rounded-3xl bg-surface/50 dark:bg-surface/20 border border-surface-border/50 backdrop-blur-2xl backdrop-saturate-[1.8] shadow-[0_8px_32px_0_rgba(0,0,0,0.1)] flex items-center justify-center relative overflow-hidden group">
             {selectedImage ? (
-              <img src={selectedImage} alt={gear.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" />
+              <img src={selectedImage} alt={gear.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
             ) : (
-              <div className="text-muted-foreground font-mono text-xl group-hover:scale-110 transition-transform duration-500 text-center px-4">
+              <div className="text-muted-foreground font-mono text-xl group-hover:scale-105 transition-transform duration-700 ease-out text-center px-4">
                 IMAGE: <br />{gear.name}
               </div>
             )}
             {gear.category === 'Camera' && (
-              <div className="absolute top-4 right-4 bg-surface-foreground/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-sm font-bold text-background border border-surface-border">
+              <div className="absolute top-4 right-4 bg-background/60 dark:bg-surface-foreground/60 backdrop-blur-md px-3 py-1.5 rounded-xl text-sm font-bold text-foreground dark:text-background border border-surface-border/50 shadow-sm">
                 Premium Quality
               </div>
             )}
@@ -174,7 +175,7 @@ export default function GearDetailPage() {
             {gear.thumbnail && (
               <div
                 onClick={() => setSelectedImage(gear.thumbnail!)}
-                className={`aspect-square rounded-xl bg-surface border flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-accent ${selectedImage === gear.thumbnail ? 'border-accent ring-2 ring-accent/50 opacity-100' : 'border-surface-border opacity-70 hover:opacity-100'}`}
+                className={`aspect-square rounded-2xl bg-surface/40 backdrop-blur-md border flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${selectedImage === gear.thumbnail ? 'border-accent ring-2 ring-accent/50 opacity-100 shadow-[0_0_15px_rgba(219,130,24,0.3)]' : 'border-surface-border/50 opacity-70 hover:opacity-100 hover:border-accent/50'}`}
               >
                 <img src={gear.thumbnail} alt="Main Thumbnail" className="h-full w-full object-cover" />
               </div>
@@ -186,7 +187,7 @@ export default function GearDetailPage() {
                 <div
                   key={idx}
                   onClick={() => setSelectedImage(imgUrl)}
-                  className={`aspect-square rounded-xl bg-surface border flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-accent ${selectedImage === imgUrl ? 'border-accent ring-2 ring-accent/50 opacity-100' : 'border-surface-border opacity-70 hover:opacity-100'}`}
+                  className={`aspect-square rounded-2xl bg-surface/40 backdrop-blur-md border flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${selectedImage === imgUrl ? 'border-accent ring-2 ring-accent/50 opacity-100 shadow-[0_0_15px_rgba(219,130,24,0.3)]' : 'border-surface-border/50 opacity-70 hover:opacity-100 hover:border-accent/50'}`}
                 >
                   <img src={imgUrl} alt={`Gallery ${idx}`} className="h-full w-full object-cover" />
                 </div>
@@ -228,7 +229,7 @@ export default function GearDetailPage() {
             {description}
           </p>
 
-          <div className="bg-surface border border-surface-border p-6 rounded-2xl mb-8">
+          <div className="bg-background/60 dark:bg-surface/40 backdrop-blur-2xl backdrop-saturate-[1.8] border border-surface-border/50 p-6 rounded-3xl mb-8 shadow-lg transition-all duration-500 hover:border-accent/30 hover:shadow-xl">
             <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-accent" /> Guaranteed Condition
             </h3>
@@ -313,7 +314,7 @@ export default function GearDetailPage() {
                     minDate={new Date()}
                     excludeDateIntervals={disabledDateRanges}
                     placeholderText="Add Date"
-                    className="w-full px-4 py-3.5 rounded-xl border-2 border-surface-border bg-surface text-foreground font-medium focus:ring-0 focus:border-accent transition-colors shadow-sm text-center placeholder:text-muted-foreground/70"
+                    className="w-full px-4 py-3.5 rounded-2xl border border-surface-border/50 bg-background/50 dark:bg-surface/50 backdrop-blur-xl text-foreground font-medium focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all duration-300 shadow-inner text-center placeholder:text-muted-foreground/50 hover:bg-surface/80"
                     calendarClassName="custom-datepicker"
                     wrapperClassName="w-full"
                     dateFormat="MMM dd, yyyy"
@@ -332,7 +333,7 @@ export default function GearDetailPage() {
                     minDate={startDate || new Date()}
                     excludeDateIntervals={disabledDateRanges}
                     placeholderText="Add Date"
-                    className="w-full px-4 py-3.5 rounded-xl border-2 border-surface-border bg-surface text-foreground font-medium focus:ring-0 focus:border-accent transition-colors shadow-sm text-center placeholder:text-muted-foreground/70"
+                    className="w-full px-4 py-3.5 rounded-2xl border border-surface-border/50 bg-background/50 dark:bg-surface/50 backdrop-blur-xl text-foreground font-medium focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all duration-300 shadow-inner text-center placeholder:text-muted-foreground/50 hover:bg-surface/80"
                     calendarClassName="custom-datepicker"
                     wrapperClassName="w-full"
                     dateFormat="MMM dd, yyyy"
@@ -359,11 +360,14 @@ export default function GearDetailPage() {
             <button
               onClick={handleAddToCart}
               disabled={isUnavailable || isCheckingAvailability}
-              className={`w-full flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-lg ${days > 0 && !isUnavailable ? 'bg-accent text-white hover:bg-accent-hover shadow-accent/20' : 'bg-surface-border text-muted-foreground cursor-not-allowed'
+              className={`group/mainbtn relative overflow-hidden w-full flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 active:scale-[0.98] shadow-lg ${days > 0 && !isUnavailable ? 'bg-accent text-white shadow-[0_8px_20px_-6px_rgba(219,130,24,0.6)] hover:shadow-[0_12px_25px_-6px_rgba(219,130,24,0.8)] hover:-translate-y-1 border border-accent/20' : 'bg-surface-border/50 text-muted-foreground cursor-not-allowed backdrop-blur-sm'
                 }`}
             >
-              <ShoppingCart className="h-5 w-5" />
-              {isUnavailable ? 'Unavailable for Dates' : days > 0 ? 'Add to Rental Cart' : 'Select Dates to Rent'}
+              {days > 0 && !isUnavailable && (
+                <div className="absolute inset-0 bg-white/20 translate-y-[100%] group-hover/mainbtn:translate-y-0 transition-transform duration-500 ease-in-out z-0"></div>
+              )}
+              <ShoppingCart className="h-5 w-5 relative z-10" />
+              <span className="relative z-10">{isUnavailable ? 'Unavailable for Dates' : days > 0 ? 'Add to Rental Cart' : 'Select Dates to Rent'}</span>
             </button>
           </div>
         </div>

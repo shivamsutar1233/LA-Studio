@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Instagram, Youtube, Twitter } from 'lucide-react';
+import { Instagram, Facebook } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 
 export default function Footer() {
   return (
@@ -14,12 +15,12 @@ export default function Footer() {
               Turn Miles into Memories. Capture every ride with the best equipment without breaking the bank.
             </p>
             <div className="mt-6 flex gap-4">
-              <a href="#" className="text-muted-foreground hover:text-accent transition-colors"><Instagram className="h-5 w-5" /></a>
-              <a href="#" className="text-muted-foreground hover:text-accent transition-colors"><Youtube className="h-5 w-5" /></a>
-              <a href="#" className="text-muted-foreground hover:text-accent transition-colors"><Twitter className="h-5 w-5" /></a>
+              <a href="https://www.instagram.com/studioleanangle/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-[#E1306C] transition-colors"><Instagram className="h-5 w-5" /></a>
+              <a href="https://www.facebook.com/profile.php?id=61587844554563#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-[#1877F2] transition-colors"><Facebook className="h-5 w-5" /></a>
+              <a href="https://wa.me/918446489146" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-[#25D366] transition-colors"><FaWhatsapp className="h-5 w-5" /></a>
             </div>
           </div>
-          
+
           <div>
             <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Explore</h3>
             <ul className="mt-4 space-y-2">
@@ -50,7 +51,7 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-        
+
         <div className="mt-16 border-t border-surface-border pt-8 flex flex-col items-center justify-between gap-4 md:flex-row">
           <p className="text-xs text-muted-foreground">
             &copy; {new Date().getFullYear()} Lean Angle Studio. All rights reserved.
