@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
@@ -45,7 +45,19 @@ interface GearData {
   images: string;
 }
 
-export default function AdminDashboard() {
+export default function AdminDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+      </div>
+    }>
+      <AdminDashboard />
+    </Suspense>
+  );
+}
+
+function AdminDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, token } = useAuthStore();
@@ -424,113 +436,115 @@ export default function AdminDashboard() {
                   <span className="hidden sm:inline">Refresh</span>
                 </button>
               </div>
-              <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden overflow-x-auto shadow-sm">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-surface-border bg-background/50">
-                      <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">ID</th>
-                      <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Customer</th>
-                      <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Item</th>
-                      <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Dates</th>
-                      <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Status</th>
-                      <th className="p-4 text-xs font-semibold text-muted-foreground uppercase text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-surface-border">
-                    {paginatedBookings.length > 0 ? paginatedBookings.map((b) => {
-                      const gearListStr = (() => {
-                        try {
-                          let allIds: any[] = [];
-
-                          if (b.gearIds) {
-                            try {
-                              const gIds = JSON.parse(b.gearIds);
-                              if (Array.isArray(gIds)) allIds = [...allIds, ...gIds];
-                            } catch (e) { /* legacy */ allIds.push(b.gearIds); }
-                          }
-
-                          if (b.bundleIds) {
-                            try {
-                              const bIds = JSON.parse(b.bundleIds);
-                              if (Array.isArray(bIds)) allIds = [...allIds, ...bIds];
-                            } catch (e) { }
-                          }
-
-                          if (allIds.length === 0) return 'No Items';
-
-                          return allIds.map((item: any) => {
-                            if (typeof item === 'string') {
-                              return gears.find(g => g.id === item)?.name || bundles.find(bd => bd.id === item)?.name || 'Unknown Item';
-                            } else if (item && item.id) {
-                              const qtyStr = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
-                              return `${item.name}${qtyStr} (${item.days} days)`;
-                            }
-                            return 'Unknown Item';
-                          }).join(', ');
-                        } catch (e) {
-                          return 'Error parsing items';
-                        }
-                      })();
-
-                      return (
-                        <tr key={b.id} className="hover:bg-background/30 transition-colors">
-                          <td className="p-4 text-sm font-mono text-muted-foreground">#{b.id}</td>
-                          <td className="p-4 text-sm font-medium text-foreground">
-                            <div className="flex items-center gap-2">
-                              {users.find(u => u.id === b.userId)?.name || b.customerDetails?.name || 'Guest Checkout'}
-                              {b.undertakingSigned === 1 && (
-                                <div title="Identity Verified & Undertaking Signed" className="h-4 w-4 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                                  <CheckCircle className="h-3 w-3 text-green-500" />
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-4 text-sm font-medium text-accent max-w-[200px]" title={gearListStr}>
-                            <div className="truncate">
-                              {gearListStr}
-                            </div>
-                          </td>
-                          <td className="p-4 text-sm text-foreground">{b.startDate} to {b.endDate}</td>
-                          <td className="p-4 text-sm">
-                            {b.status === 'cancelled' ? (
-                              <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${b.refundStatus === 'processed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
-                                'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
-                                }`}>
-                                Refund {b.refundStatus === 'processed' ? 'Processed' : 'Pending'}
-                              </span>
-                            ) : (
-                              <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${b.status === 'confirmed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
-                                b.status === 'rejected' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
-                                  'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
-                                }`}>
-                                {b.status}
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-4 flex items-center justify-end gap-2">
-                            <button onClick={() => setViewingBooking(b)} className="p-2 text-muted-foreground hover:text-accent bg-background rounded-lg border border-surface-border transition-colors group" title="View Order Details">
-                              <Eye className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                            </button>
-                            {b.status === 'pending' && (
-                              <>
-                                <button onClick={() => updateBookingStatus(b.id, 'confirmed')} className="p-2 text-muted-foreground hover:text-green-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Accept Booking">
-                                  <CheckCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                                </button>
-                                <button onClick={() => updateBookingStatus(b.id, 'rejected')} className="p-2 text-muted-foreground hover:text-red-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Reject Booking">
-                                  <XCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                                </button>
-                              </>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    }) : (
-                      <tr>
-                        <td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No bookings found on the platform.</td>
+              <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto overflow-y-auto max-h-[600px] min-h-[600px]">
+                  <table className="w-full text-left border-collapse sticky-header">
+                    <thead className="sticky top-0 z-10 bg-surface">
+                      <tr className="border-b border-surface-border bg-background/50">
+                        <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">ID</th>
+                        <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Customer</th>
+                        <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Item</th>
+                        <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Dates</th>
+                        <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Status</th>
+                        <th className="p-4 text-xs font-semibold text-muted-foreground uppercase text-right">Actions</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-surface-border">
+                      {paginatedBookings.length > 0 ? paginatedBookings.map((b) => {
+                        const gearListStr = (() => {
+                          try {
+                            let allIds: any[] = [];
+
+                            if (b.gearIds) {
+                              try {
+                                const gIds = JSON.parse(b.gearIds);
+                                if (Array.isArray(gIds)) allIds = [...allIds, ...gIds];
+                              } catch (e) { /* legacy */ allIds.push(b.gearIds); }
+                            }
+
+                            if (b.bundleIds) {
+                              try {
+                                const bIds = JSON.parse(b.bundleIds);
+                                if (Array.isArray(bIds)) allIds = [...allIds, ...bIds];
+                              } catch (e) { }
+                            }
+
+                            if (allIds.length === 0) return 'No Items';
+
+                            return allIds.map((item: any) => {
+                              if (typeof item === 'string') {
+                                return gears.find(g => g.id === item)?.name || bundles.find(bd => bd.id === item)?.name || 'Unknown Item';
+                              } else if (item && item.id) {
+                                const qtyStr = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
+                                return `${item.name}${qtyStr} (${item.days} days)`;
+                              }
+                              return 'Unknown Item';
+                            }).join(', ');
+                          } catch (e) {
+                            return 'Error parsing items';
+                          }
+                        })();
+
+                        return (
+                          <tr key={b.id} className="hover:bg-background/30 transition-colors">
+                            <td className="p-4 text-sm font-mono text-muted-foreground">#{b.id}</td>
+                            <td className="p-4 text-sm font-medium text-foreground">
+                              <div className="flex items-center gap-2">
+                                {users.find(u => u.id === b.userId)?.name || b.customerDetails?.name || 'Guest Checkout'}
+                                {b.undertakingSigned === 1 && (
+                                  <div title="Identity Verified & Undertaking Signed" className="h-4 w-4 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                                    <CheckCircle className="h-3 w-3 text-green-500" />
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4 text-sm font-medium text-accent max-w-[200px]" title={gearListStr}>
+                              <div className="truncate">
+                                {gearListStr}
+                              </div>
+                            </td>
+                            <td className="p-4 text-sm text-foreground">{b.startDate} to {b.endDate}</td>
+                            <td className="p-4 text-sm">
+                              {b.status === 'cancelled' ? (
+                                <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${b.refundStatus === 'processed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
+                                  'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+                                  }`}>
+                                  Refund {b.refundStatus === 'processed' ? 'Processed' : 'Pending'}
+                                </span>
+                              ) : (
+                                <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${b.status === 'confirmed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
+                                  b.status === 'rejected' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
+                                    'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+                                  }`}>
+                                  {b.status}
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-4 flex items-center justify-end gap-2">
+                              <button onClick={() => setViewingBooking(b)} className="p-2 text-muted-foreground hover:text-accent bg-background rounded-lg border border-surface-border transition-colors group" title="View Order Details">
+                                <Eye className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                              </button>
+                              {b.status === 'pending' && (
+                                <>
+                                  <button onClick={() => updateBookingStatus(b.id, 'confirmed')} className="p-2 text-muted-foreground hover:text-green-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Accept Booking">
+                                    <CheckCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                  </button>
+                                  <button onClick={() => updateBookingStatus(b.id, 'rejected')} className="p-2 text-muted-foreground hover:text-red-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Reject Booking">
+                                    <XCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                  </button>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      }) : (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No bookings found on the platform.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
               <Pagination currentPage={bookingsPage} totalPages={totalBookingsPages} onPageChange={setBookingsPage} />
             </div>
@@ -563,40 +577,42 @@ export default function AdminDashboard() {
           </div>
 
           <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-surface-border bg-background/50">
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Item Name</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Price/Day</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-border">
-                {paginatedGears.map((g) => (
-                  <tr key={g.id} className="hover:bg-background/30 transition-colors">
-                    <td className="p-4 text-xs font-mono text-muted-foreground">#{g.id}</td>
-                    <td className="p-4 text-sm font-bold text-foreground flex items-center gap-3">
-                      <div className="h-8 w-8 rounded bg-background border border-surface-border shrink-0 flex items-center justify-center overflow-hidden">
-                        {g.thumbnail ? <img src={g.thumbnail} alt={g.name} className="h-full w-full object-cover opacity-50" /> : <span className="text-[8px] text-muted-foreground">IMG</span>}
-                      </div>
-                      {g.name}
-                    </td>
-                    <td className="p-4 text-sm text-muted-foreground">{g.category}</td>
-                    <td className="p-4 text-sm font-bold text-foreground">₹{g.pricePerDay}</td>
-                    <td className="p-4 flex items-center justify-end gap-2">
-                      <button onClick={() => openModal(g)} className="p-2 text-muted-foreground hover:text-accent bg-background rounded-lg border border-surface-border transition-colors group" title="Edit Gear">
-                        <Edit2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                      </button>
-                      <button onClick={() => deleteGear(g.id)} className="p-2 text-muted-foreground hover:text-red-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Delete Gear">
-                        <Trash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                      </button>
-                    </td>
+            <div className="overflow-x-auto overflow-y-auto max-h-[600px] min-h-[600px]">
+              <table className="w-full text-left border-collapse sticky-header">
+                <thead className="sticky top-0 z-10 bg-surface">
+                  <tr className="border-b border-surface-border bg-background/50">
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Item Name</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Price/Day</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-surface-border">
+                  {paginatedGears.map((g) => (
+                    <tr key={g.id} className="hover:bg-background/30 transition-colors">
+                      <td className="p-4 text-xs font-mono text-muted-foreground">#{g.id}</td>
+                      <td className="p-4 text-sm font-bold text-foreground flex items-center gap-3">
+                        <div className="h-8 w-8 rounded bg-background border border-surface-border shrink-0 flex items-center justify-center overflow-hidden">
+                          {g.thumbnail ? <img src={g.thumbnail} alt={g.name} className="h-full w-full object-cover opacity-50" /> : <span className="text-[8px] text-muted-foreground">IMG</span>}
+                        </div>
+                        {g.name}
+                      </td>
+                      <td className="p-4 text-sm text-muted-foreground">{g.category}</td>
+                      <td className="p-4 text-sm font-bold text-foreground">₹{g.pricePerDay}</td>
+                      <td className="p-4 flex items-center justify-end gap-2">
+                        <button onClick={() => openModal(g)} className="p-2 text-muted-foreground hover:text-accent bg-background rounded-lg border border-surface-border transition-colors group" title="Edit Gear">
+                          <Edit2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                        </button>
+                        <button onClick={() => deleteGear(g.id)} className="p-2 text-muted-foreground hover:text-red-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Delete Gear">
+                          <Trash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
           <Pagination currentPage={inventoryPage} totalPages={totalGearsPages} onPageChange={setInventoryPage} />
         </div>
@@ -627,53 +643,55 @@ export default function AdminDashboard() {
           </div>
 
           <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-surface-border bg-background/50">
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bundle Name</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gears Included</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Price/Day</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-border">
-                {paginatedBundles.map((b) => (
-                  <tr key={b.id} className="hover:bg-background/30 transition-colors">
-                    <td className="p-4 text-xs font-mono text-muted-foreground">#{b.id}</td>
-                    <td className="p-4 text-sm font-bold text-foreground flex items-center gap-3">
-                      <div className="h-8 w-8 rounded bg-background border border-surface-border shrink-0 flex items-center justify-center overflow-hidden">
-                        {b.thumbnail ? <img src={b.thumbnail} alt={b.name} className="h-full w-full object-cover opacity-50" /> : <span className="text-[8px] text-muted-foreground">IMG</span>}
-                      </div>
-                      {b.name}
-                    </td>
-                    <td className="p-4 text-sm text-muted-foreground">
-                      {(() => {
-                        try {
-                          return JSON.parse(b.gearIds).length + ' gears';
-                        } catch { return '0 gears'; }
-                      })()}
-                    </td>
-                    <td className="p-4 text-sm font-bold text-foreground">₹{b.pricePerDay}</td>
-                    <td className="p-4 flex items-center justify-end gap-2">
-                      <button onClick={() => openBundleModal(b)} className="p-2 text-muted-foreground hover:text-accent bg-background rounded-lg border border-surface-border transition-colors group" title="Edit Bundle">
-                        <Edit2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                      </button>
-                      <button onClick={() => deleteBundle(b.id)} className="p-2 text-muted-foreground hover:text-red-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Delete Bundle">
-                        <Trash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                      </button>
-                    </td>
+            <div className="overflow-x-auto overflow-y-auto max-h-[600px] min-h-[600px]">
+              <table className="w-full text-left border-collapse sticky-header">
+                <thead className="sticky top-0 z-10 bg-surface">
+                  <tr className="border-b border-surface-border bg-background/50">
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bundle Name</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gears Included</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Price/Day</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
                   </tr>
-                ))}
-                {bundles.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No bundles created yet.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-surface-border">
+                  {paginatedBundles.map((b) => (
+                    <tr key={b.id} className="hover:bg-background/30 transition-colors">
+                      <td className="p-4 text-xs font-mono text-muted-foreground">#{b.id}</td>
+                      <td className="p-4 text-sm font-bold text-foreground flex items-center gap-3">
+                        <div className="h-8 w-8 rounded bg-background border border-surface-border shrink-0 flex items-center justify-center overflow-hidden">
+                          {b.thumbnail ? <img src={b.thumbnail} alt={b.name} className="h-full w-full object-cover opacity-50" /> : <span className="text-[8px] text-muted-foreground">IMG</span>}
+                        </div>
+                        {b.name}
+                      </td>
+                      <td className="p-4 text-sm text-muted-foreground">
+                        {(() => {
+                          try {
+                            return JSON.parse(b.gearIds).length + ' gears';
+                          } catch { return '0 gears'; }
+                        })()}
+                      </td>
+                      <td className="p-4 text-sm font-bold text-foreground">₹{b.pricePerDay}</td>
+                      <td className="p-4 flex items-center justify-end gap-2">
+                        <button onClick={() => openBundleModal(b)} className="p-2 text-muted-foreground hover:text-accent bg-background rounded-lg border border-surface-border transition-colors group" title="Edit Bundle">
+                          <Edit2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                        </button>
+                        <button onClick={() => deleteBundle(b.id)} className="p-2 text-muted-foreground hover:text-red-500 bg-background rounded-lg border border-surface-border transition-colors group" title="Delete Bundle">
+                          <Trash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {bundles.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">No bundles created yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <Pagination currentPage={bundlesPage} totalPages={totalBundlesPages} onPageChange={setBundlesPage} />
           </div>
-          <Pagination currentPage={bundlesPage} totalPages={totalBundlesPages} onPageChange={setBundlesPage} />
         </div>
       )}
 
@@ -694,36 +712,38 @@ export default function AdminDashboard() {
           </div>
 
           <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-surface-border bg-background/50">
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name / Email</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Role</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-border">
-                {paginatedUsers.length > 0 ? paginatedUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-background/30 transition-colors">
-                    <td className="p-4 text-xs font-mono text-muted-foreground">#{u.id}</td>
-                    <td className="p-4">
-                      <p className="text-sm font-bold text-foreground">{u.name}</p>
-                      <p className="text-xs text-muted-foreground">{u.email}</p>
-                    </td>
-                    <td className="p-4 text-right flex justify-end">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${u.role === 'admin' ? 'bg-accent/10 border-accent/20 text-accent' : 'bg-surface-border text-muted-foreground'
-                        }`}>
-                        {u.role}
-                      </span>
-                    </td>
+            <div className="overflow-x-auto overflow-y-auto max-h-[600px] min-h-[600px]">
+              <table className="w-full text-left border-collapse sticky-header">
+                <thead className="sticky top-0 z-10 bg-surface">
+                  <tr className="border-b border-surface-border bg-background/50">
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name / Email</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Role</th>
                   </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={3} className="p-8 text-center text-sm text-muted-foreground">No users registered yet.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-surface-border">
+                  {paginatedUsers.length > 0 ? paginatedUsers.map((u) => (
+                    <tr key={u.id} className="hover:bg-background/30 transition-colors">
+                      <td className="p-4 text-xs font-mono text-muted-foreground">#{u.id}</td>
+                      <td className="p-4">
+                        <p className="text-sm font-bold text-foreground">{u.name}</p>
+                        <p className="text-xs text-muted-foreground">{u.email}</p>
+                      </td>
+                      <td className="p-4 text-right flex justify-end">
+                        <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${u.role === 'admin' ? 'bg-accent/10 border-accent/20 text-accent' : 'bg-surface-border text-muted-foreground'
+                          }`}>
+                          {u.role}
+                        </span>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={3} className="p-8 text-center text-sm text-muted-foreground">No users registered yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
           <Pagination currentPage={usersPage} totalPages={totalUsersPages} onPageChange={setUsersPage} />
         </div>
@@ -746,9 +766,9 @@ export default function AdminDashboard() {
           </div>
 
           <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
+            <div className="overflow-x-auto overflow-y-auto max-h-[600px] min-h-[600px]">
+              <table className="w-full text-left border-collapse sticky-header">
+                <thead className="sticky top-0 z-10 bg-surface">
                   <tr className="border-b border-surface-border bg-background/50">
                     <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Order ID</th>
                     <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Customer</th>

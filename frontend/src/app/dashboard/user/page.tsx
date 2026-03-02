@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Pagination from '@/components/ui/Pagination';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { Package, CalendarRange, Clock, Edit2, Check, X, User as UserIcon, Mail, Loader2, RefreshCw, CheckCircle, XCircle, Ban } from 'lucide-react';
@@ -36,6 +37,9 @@ export default function UserDashboard() {
   const [gearInfo, setGearInfo] = useState<GearDetails>({});
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const [hasHydrated, setHasHydrated] = useState(false);
 
@@ -145,6 +149,13 @@ export default function UserDashboard() {
       toast.error(error.response?.data?.message || "Failed to cancel booking");
     }
   };
+
+  const paginatedBookings = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return bookings.slice(start, start + ITEMS_PER_PAGE);
+  }, [bookings, currentPage]);
+
+  const totalPages = Math.ceil(bookings.length / ITEMS_PER_PAGE) || 1;
 
   if (loading) {
     return <div className="flex-1 flex items-center justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
@@ -268,121 +279,124 @@ export default function UserDashboard() {
           </button>
         </div>
       ) : (
-        <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-surface-border bg-background/50">
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Booking ID</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Item</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dates</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                  <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-border">
-                {bookings.map((booking) => {
-                  const gearListStr = (() => {
-                    try {
-                      let allIds: any[] = [];
+        <>
+          <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto overflow-y-auto max-h-[600px] min-h-[600px]">
+              <table className="w-full text-left border-collapse sticky-header">
+                <thead className="sticky top-0 z-10 bg-surface">
+                  <tr className="border-b border-surface-border bg-background/50">
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Booking ID</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Item</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dates</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-border">
+                  {paginatedBookings.map((booking) => {
+                    const gearListStr = (() => {
+                      try {
+                        let allIds: any[] = [];
 
-                      if (booking.gearIds) {
-                        try {
-                          const gIds = JSON.parse(booking.gearIds);
-                          if (Array.isArray(gIds)) allIds = [...allIds, ...gIds];
-                        } catch (e) { allIds.push(booking.gearIds); }
-                      }
-
-                      if (booking.bundleIds) {
-                        try {
-                          const bIds = JSON.parse(booking.bundleIds);
-                          if (Array.isArray(bIds)) allIds = [...allIds, ...bIds];
-                        } catch (e) { }
-                      }
-
-                      if (allIds.length === 0) return 'No Items';
-
-                      return allIds.map((item: any) => {
-                        if (typeof item === 'string') {
-                          return gearInfo[item]?.name || 'Unknown Item';
-                        } else if (item && item.id) {
-                          const qtyStr = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
-                          return `${item.name}${qtyStr} (${item.days} days)`;
+                        if (booking.gearIds) {
+                          try {
+                            const gIds = JSON.parse(booking.gearIds);
+                            if (Array.isArray(gIds)) allIds = [...allIds, ...gIds];
+                          } catch (e) { allIds.push(booking.gearIds); }
                         }
-                        return 'Unknown Item';
-                      }).join(', ');
-                    } catch (e) {
-                      return 'Error parsing items';
-                    }
-                  })();
 
-                  return (
-                    <tr key={booking.id} className="hover:bg-background/30 transition-colors">
-                      <td className="p-4 text-sm font-mono text-muted-foreground">#{booking.id}</td>
-                      <td className="p-4 text-sm font-bold text-foreground max-w-[200px]" title={gearListStr}>
-                        <div className="truncate">
-                          {gearListStr}
-                        </div>
-                      </td>
-                      <td className="p-4 text-sm text-foreground">
-                        {booking.startDate} &rarr; {booking.endDate}
-                      </td>
-                      <td className="p-4 text-sm">
-                        <div className="flex flex-col gap-2 items-start">
-                          {booking.status === 'cancelled' ? (
-                            <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${booking.refundStatus === 'processed'
-                              ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                              : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                              }`}>
-                              {booking.refundStatus === 'processed' ? <CheckCircle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                              <span>Refund {booking.refundStatus === 'processed' ? 'Processed' : 'Pending'}</span>
-                            </div>
-                          ) : (
-                            <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${booking.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                              booking.status === 'rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                              }`}>
-                              {booking.status === 'confirmed' && <CheckCircle className="h-3.5 w-3.5" />}
-                              {booking.status === 'rejected' && <XCircle className="h-3.5 w-3.5" />}
-                              {booking.status === 'pending' && <Clock className="h-3.5 w-3.5" />}
-                              <span>{booking.status}</span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4 flex items-center justify-end gap-2">
-                        {(booking.status === 'pending' || booking.status === 'confirmed') && (
-                          <>
-                            {booking.status === 'confirmed' && (
-                              booking.undertakingSigned === 1 ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">
-                                  <Check className="h-3 w-3" /> Signed
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => router.push(`/dashboard/user/undertaking/${booking.id}`)}
-                                  className="text-[10px] font-bold bg-accent text-white px-3 py-1.5 rounded hover:bg-accent-hover transition-colors shadow-sm"
-                                >
-                                  Sign Undertaking
-                                </button>
-                              )
+                        if (booking.bundleIds) {
+                          try {
+                            const bIds = JSON.parse(booking.bundleIds);
+                            if (Array.isArray(bIds)) allIds = [...allIds, ...bIds];
+                          } catch (e) { }
+                        }
+
+                        if (allIds.length === 0) return 'No Items';
+
+                        return allIds.map((item: any) => {
+                          if (typeof item === 'string') {
+                            return gearInfo[item]?.name || 'Unknown Item';
+                          } else if (item && item.id) {
+                            const qtyStr = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : '';
+                            return `${item.name}${qtyStr} (${item.days} days)`;
+                          }
+                          return 'Unknown Item';
+                        }).join(', ');
+                      } catch (e) {
+                        return 'Error parsing items';
+                      }
+                    })();
+
+                    return (
+                      <tr key={booking.id} className="hover:bg-background/30 transition-colors">
+                        <td className="p-4 text-sm font-mono text-muted-foreground">#{booking.id}</td>
+                        <td className="p-4 text-sm font-bold text-foreground max-w-[200px]" title={gearListStr}>
+                          <div className="truncate">
+                            {gearListStr}
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm text-foreground">
+                          {booking.startDate} &rarr; {booking.endDate}
+                        </td>
+                        <td className="p-4 text-sm">
+                          <div className="flex flex-col gap-2 items-start">
+                            {booking.status === 'cancelled' ? (
+                              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${booking.refundStatus === 'processed'
+                                ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                                : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                                }`}>
+                                {booking.refundStatus === 'processed' ? <CheckCircle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                                <span>Refund {booking.refundStatus === 'processed' ? 'Processed' : 'Pending'}</span>
+                              </div>
+                            ) : (
+                              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${booking.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                booking.status === 'rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                  'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                                }`}>
+                                {booking.status === 'confirmed' && <CheckCircle className="h-3.5 w-3.5" />}
+                                {booking.status === 'rejected' && <XCircle className="h-3.5 w-3.5" />}
+                                {booking.status === 'pending' && <Clock className="h-3.5 w-3.5" />}
+                                <span>{booking.status}</span>
+                              </div>
                             )}
-                            <button
-                              onClick={() => handleCancelBooking(booking.id)}
-                              className="text-[10px] font-bold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded border border-red-500/20 transition-colors"
-                            >
-                              Cancel Booking
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          </div>
+                        </td>
+                        <td className="p-4 flex items-center justify-end gap-2">
+                          {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                            <>
+                              {booking.status === 'confirmed' && (
+                                booking.undertakingSigned === 1 ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">
+                                    <Check className="h-3 w-3" /> Signed
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={() => router.push(`/dashboard/user/undertaking/${booking.id}`)}
+                                    className="text-[10px] font-bold bg-accent text-white px-3 py-1.5 rounded hover:bg-accent-hover transition-colors shadow-sm"
+                                  >
+                                    Sign Undertaking
+                                  </button>
+                                )
+                              )}
+                              <button
+                                onClick={() => handleCancelBooking(booking.id)}
+                                className="text-[10px] font-bold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded border border-red-500/20 transition-colors"
+                              >
+                                Cancel Booking
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </>
       )}
     </div>
   );
