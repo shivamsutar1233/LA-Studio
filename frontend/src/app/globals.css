@@ -127,3 +127,17 @@ summary {
 .react-datepicker-popper {
   z-index: 9999 !important;
 }
+
+/* Custom Ping Animation */
+@keyframes ping-large {
+
+  75%,
+  100% {
+    transform: scale(3.5);
+    opacity: 0;
+  }
+}
+
+.animate-ping-large {
+  animation: ping-large 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}

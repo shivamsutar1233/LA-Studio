@@ -8,14 +8,17 @@ export default function Home() {
       <section className="relative w-full min-h-[85vh] flex items-center justify-center overflow-hidden bg-background">
         {/* Abstract Background Elements */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-          <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-accent rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-pulse"></div>
+          <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-accent rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
           <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-accent-hover rounded-full mix-blend-multiply filter blur-[128px] opacity-10"></div>
           <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-5"></div>
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center pt-20 pb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-panel mb-8 border-none">
-            <span className="flex h-2 w-2 rounded-full bg-accent animate-pulse"></span>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping-large absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+            </span>
             <span className="text-xs font-medium text-foreground tracking-wide uppercase">New Gear Available</span>
           </div>
 

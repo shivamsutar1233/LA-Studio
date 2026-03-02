@@ -81,7 +81,7 @@ function CatalogContent() {
   return (
     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full">
       {/* Background Refraction Orbs */}
-      <div className="absolute top-20 right-[10%] w-96 h-96 bg-accent rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-pulse pointer-events-none -z-10"></div>
+      <div className="absolute top-20 right-[10%] w-96 h-96 bg-accent rounded-full mix-blend-multiply filter blur-[128px] opacity-20 pointer-events-none -z-10"></div>
       <div className="absolute bottom-20 left-[5%] w-[500px] h-[500px] bg-accent-hover rounded-full mix-blend-multiply filter blur-[128px] opacity-10 pointer-events-none -z-10"></div>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6 relative z-10">
@@ -111,8 +111,8 @@ function CatalogContent() {
             key={cat}
             onClick={() => setActiveCategory(cat)}
             className={`px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${activeCategory === cat
-                ? 'btn-liquid bg-accent text-white shadow-lg shadow-accent/20'
-                : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface/50'
+              ? 'btn-liquid bg-accent text-white shadow-lg shadow-accent/20'
+              : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface/50'
               }`}
           >
             <span className="relative z-10">{cat === "Camera" ? "Cameras" : cat}</span>
