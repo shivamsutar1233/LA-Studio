@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ChevronRight, Video, ShieldCheck, Zap } from 'lucide-react';
+import { ChevronRight, Video, ShieldCheck, Zap, MousePointerClick, Clock, Repeat, CheckCircle, Wrench, Sparkles, CreditCard, Star, Quote } from 'lucide-react';
+import FeaturedGearSection from '@/components/home/FeaturedGearSection';
 
 export default function Home() {
   return (
@@ -8,8 +9,6 @@ export default function Home() {
       <section className="relative w-full min-h-[85vh] flex items-center justify-center overflow-hidden bg-background">
         {/* Abstract Background Elements */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-          <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-accent rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
-          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-accent-hover rounded-full mix-blend-multiply filter blur-[128px] opacity-10"></div>
           <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-5"></div>
         </div>
 
@@ -76,6 +75,220 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-bold text-foreground mb-3">Damage Protection</h3>
               <p className="text-muted-foreground leading-relaxed">Ride with peace of mind. Optional damage protection plans cover you against unexpected drops and spills.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* Featured Gear Section (Dynamic Client Component) */}
+      <FeaturedGearSection />
+
+      {/* How It Works Section */}
+      <section className="py-24 bg-surface/10 relative z-10 border-y border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-foreground mb-4">How It Works</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">Your next moto vlog is just three simple steps away. No complex contracts, just ride.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
+            {/* Connecting Line (Desktop Only) */}
+            <div className="hidden md:block absolute top-[48px] left-[15%] right-[15%] h-1 bg-gradient-to-r from-accent/0 via-accent/50 to-accent/0 z-0"></div>
+
+            <div className="glass-panel p-8 rounded-3xl flex flex-col items-center text-center relative z-10">
+              <div className="h-24 w-24 rounded-full bg-background border-4 border-accent flex items-center justify-center mb-8 shadow-lg shadow-accent/20">
+                <MousePointerClick className="h-10 w-10 text-accent" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-4">1. Choose Your Gear</h3>
+              <p className="text-muted-foreground leading-relaxed">Browse our catalog of premium action cameras and audio setups perfectly tailored for moto vlogging.</p>
+            </div>
+
+            <div className="glass-panel p-8 rounded-3xl flex flex-col items-center text-center relative z-10">
+              <div className="h-24 w-24 rounded-full bg-background border-4 border-accent flex items-center justify-center mb-8 shadow-lg shadow-accent/20">
+                <Clock className="h-10 w-10 text-accent" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-4">2. We Deliver</h3>
+              <p className="text-muted-foreground leading-relaxed">Select your dates. We deliver the sanitized, fully-charged gear straight to your doorstep before your ride.</p>
+            </div>
+
+            <div className="glass-panel p-8 rounded-3xl flex flex-col items-center text-center relative z-10">
+              <div className="h-24 w-24 rounded-full bg-background border-4 border-accent flex items-center justify-center mb-8 shadow-lg shadow-accent/20">
+                <Repeat className="h-10 w-10 text-accent" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-4">3. Ride & Return</h3>
+              <p className="text-muted-foreground leading-relaxed">Capture epic footage on your trip. When you're done, simply pack it up and we'll handle the return shipping.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Premium Bundles Section */}
+      <section className="py-24 relative z-10 w-full">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-accent/5 rounded-full filter blur-[100px] pointer-events-none -z-10"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-panel mb-4 border-none">
+              <span className="text-xs font-bold text-accent tracking-wide uppercase">Best Value</span>
+            </div>
+            <h2 className="text-3xl md:text-5xl font-extrabold text-foreground mb-4">Ready-to-Ride Kits</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">Save time and money with our complete, pre-configured bundles. Everything you need to start recording.</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Combo 1 */}
+            <div className="glass-panel rounded-3xl p-8 flex flex-col md:flex-row gap-8 items-center group transition-all hover:-translate-y-1">
+              <div className="w-full md:w-2/5 aspect-square glass-panel !bg-surface/50 rounded-2xl flex items-center justify-center p-4">
+                <img src="https://ab2bbkrtuubturud.public.blob.vercel-storage.com/product_images/1770984180415-prmtt2t-Screenshot%202025-02-14%20173238.png" alt="DJI Action 5 Bundle" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
+              </div>
+              <div className="w-full md:w-3/5 flex flex-col">
+                <h3 className="text-2xl font-bold text-foreground mb-2">The Ultimate MotoVlog Kit</h3>
+                <p className="text-muted-foreground mb-6">DJI Action 5 Pro + Dual Mic Setup + Custom Chin Mount.</p>
+
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-center gap-2 text-sm text-surface-foreground"><CheckCircle className="h-4 w-4 text-accent" /> DJI Action 5 Pro Adventure Combo</li>
+                  <li className="flex items-center gap-2 text-sm text-surface-foreground"><CheckCircle className="h-4 w-4 text-accent" /> DJI Mic 2 (2 TX + 1 RX)</li>
+                  <li className="flex items-center gap-2 text-sm text-surface-foreground"><CheckCircle className="h-4 w-4 text-accent" /> RidePro Helmet Chin Mount</li>
+                </ul>
+
+                <div className="mt-auto flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-muted-foreground line-through mr-2">₹2500/day</span>
+                    <span className="text-2xl font-black text-foreground">₹2100<span className="text-sm font-normal text-muted-foreground">/day</span></span>
+                  </div>
+                  <Link href="/catalog?category=bundles" className="btn-liquid bg-background border border-surface-border px-6 py-2 rounded-xl font-bold text-sm text-foreground">
+                    <span className="relative z-10">Rent Bundle</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Combo 2 */}
+            <div className="glass-panel rounded-3xl p-8 flex flex-col md:flex-row gap-8 items-center group transition-all hover:-translate-y-1">
+              <div className="w-full md:w-2/5 aspect-square glass-panel !bg-surface/50 rounded-2xl flex items-center justify-center p-4">
+                <img src="https://ab2bbkrtuubturud.public.blob.vercel-storage.com/product_images/1771408139556-91d4ehi-Insta360%20x4.png" alt="Insta360 X4 Bundle" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
+              </div>
+              <div className="w-full md:w-3/5 flex flex-col">
+                <h3 className="text-2xl font-bold text-foreground mb-2">360° Perspective Pack</h3>
+                <p className="text-muted-foreground mb-6">Capture every angle with the Insta360 X4 + Invisible Selfie Stick + Handlebar Mount.</p>
+
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-center gap-2 text-sm text-surface-foreground"><CheckCircle className="h-4 w-4 text-accent" /> Insta360 X4 Camera</li>
+                  <li className="flex items-center gap-2 text-sm text-surface-foreground"><CheckCircle className="h-4 w-4 text-accent" /> 114cm Invisible Selfie Stick</li>
+                  <li className="flex items-center gap-2 text-sm text-surface-foreground"><CheckCircle className="h-4 w-4 text-accent" /> Heavy Duty Handlebar Mount</li>
+                </ul>
+
+                <div className="mt-auto flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-muted-foreground line-through mr-2">₹1900/day</span>
+                    <span className="text-2xl font-black text-foreground">₹1600<span className="text-sm font-normal text-muted-foreground">/day</span></span>
+                  </div>
+                  <Link href="/catalog?category=bundles" className="btn-liquid bg-background border border-surface-border px-6 py-2 rounded-xl font-bold text-sm text-foreground">
+                    <span className="relative z-10">Rent Bundle</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose Us Section */}
+      <section className="py-24 bg-surface/10 relative z-10 border-y border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-foreground mb-4">Why Rent Instead of Buy?</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">Action cameras depreciate fast and release new models every year. Stop buying gear that sits in a drawer between trips.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="glass-panel p-10 rounded-3xl group">
+              <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center mb-6 text-accent group-hover:scale-110 transition-transform">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-3">Always Up To Date</h3>
+              <p className="text-muted-foreground leading-relaxed">Why be stuck with the Hero 10 when the 12 is out? Renting guarantees you always shoot with the latest flagship tech and highest resolutions.</p>
+            </div>
+
+            <div className="glass-panel p-10 rounded-3xl group">
+              <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center mb-6 text-accent group-hover:scale-110 transition-transform">
+                <Wrench className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-3">Zero Maintenance</h3>
+              <p className="text-muted-foreground leading-relaxed">No need to manage firmware updates, buy replacement batteries, or clean lenses. We handle all the tedious maintenance before delivery.</p>
+            </div>
+
+            <div className="glass-panel p-10 rounded-3xl group">
+              <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center mb-6 text-accent group-hover:scale-110 transition-transform">
+                <CreditCard className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-3">No Depreciation</h3>
+              <p className="text-muted-foreground leading-relaxed">A ₹45,000 camera setup loses half its value in a year. Rent it for a 3-day weekend trip for just ₹3,600 and never worry about resale value again.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Rider Reviews Section */}
+      <section className="py-24 relative z-10 w-full overflow-hidden">
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-accent-hover/5 rounded-full filter blur-[100px] pointer-events-none -z-10"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-foreground mb-4">Trusted by Riders</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">Don't just take our word for it. See what fellow moto vloggers say about Lean Angle Studio.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Review 1 */}
+            <div className="glass-panel p-8 rounded-3xl relative">
+              <Quote className="absolute top-6 right-6 h-12 w-12 text-accent/10" />
+              <div className="flex gap-1 mb-6 text-accent">
+                <Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" />
+              </div>
+              <p className="text-foreground leading-relaxed italic mb-8 relative z-10">
+                "Rented the Insta360 X4 for a weekend trip to Spiti Valley. The gear was spotless, batteries were fully charged, and the invisible selfie stick mount they provided worked flawlessly on my handlebars."
+              </p>
+              <div className="flex items-center gap-4 border-t border-surface-border pt-6">
+                <div className="h-10 w-10 rounded-full bg-surface-border flex items-center justify-center font-bold text-muted-foreground">R</div>
+                <div>
+                  <h4 className="font-bold text-foreground">Rahul Sharma</h4>
+                  <p className="text-sm text-muted-foreground">KTM 390 Adventure</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Review 2 */}
+            <div className="glass-panel p-8 rounded-3xl relative md:translate-y-8">
+              <Quote className="absolute top-6 right-6 h-12 w-12 text-accent/10" />
+              <div className="flex gap-1 mb-6 text-accent">
+                <Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" />
+              </div>
+              <p className="text-foreground leading-relaxed italic mb-8 relative z-10">
+                "Saved me ₹40k! I was going to buy a GoPro just for one long ride, but renting from Lean Angle made so much more sense. The audio setup with the DJI mic was crystal clear even at 100kmph."
+              </p>
+              <div className="flex items-center gap-4 border-t border-surface-border pt-6">
+                <div className="h-10 w-10 rounded-full bg-surface-border flex items-center justify-center font-bold text-muted-foreground">A</div>
+                <div>
+                  <h4 className="font-bold text-foreground">Aryan Patel</h4>
+                  <p className="text-sm text-muted-foreground">Royal Enfield Himalayan</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Review 3 */}
+            <div className="glass-panel p-8 rounded-3xl relative">
+              <Quote className="absolute top-6 right-6 h-12 w-12 text-accent/10" />
+              <div className="flex gap-1 mb-6 text-accent">
+                <Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" /><Star className="h-5 w-5 fill-current" />
+              </div>
+              <p className="text-foreground leading-relaxed italic mb-8 relative z-10">
+                "The delivery was super fast and everything came in a rugged hard case. The chin mount they included was way better than the cheap plastic ones I've used before. Highly recommend!"
+              </p>
+              <div className="flex items-center gap-4 border-t border-surface-border pt-6">
+                <div className="h-10 w-10 rounded-full bg-surface-border flex items-center justify-center font-bold text-muted-foreground">S</div>
+                <div>
+                  <h4 className="font-bold text-foreground">Sneha Reddy</h4>
+                  <p className="text-sm text-muted-foreground">Triumph Trident 660</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

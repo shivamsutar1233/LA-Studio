@@ -14,6 +14,18 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/featured", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    // Fetch top 3 most premium gears based on pricePerDay
+    const featuredGear = await db.all('SELECT * FROM gears ORDER BY pricePerDay DESC LIMIT 3');
+    res.json(featuredGear);
+  } catch (err) {
+    console.error("Error fetching featured gear:", err);
+    res.status(500).json({ message: "Error fetching featured gear" });
+  }
+});
+
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const db = await getDb();

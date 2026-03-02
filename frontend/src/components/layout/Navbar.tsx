@@ -32,12 +32,6 @@ export default function Navbar() {
           <Link href="/catalog" className="text-sm font-medium text-foreground hover:text-accent transition-colors">
             Catalog
           </Link>
-          <Link href="/how-it-works" className="text-sm font-medium text-foreground hover:text-accent transition-colors">
-            How It Works
-          </Link>
-          <Link href="/faq" className="text-sm font-medium text-foreground hover:text-accent transition-colors">
-            FAQ
-          </Link>
           <Link href="/cart">
             <button className="relative flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-surface-border">
               <ShoppingCart className="h-4 w-4" />
@@ -110,12 +104,6 @@ export default function Navbar() {
           <div className="flex flex-col space-y-4">
             <Link href="/catalog" className="text-base font-medium text-foreground hover:text-accent" onClick={() => setIsOpen(false)}>
               Gear Catalog
-            </Link>
-            <Link href="/how-it-works" className="text-base font-medium text-foreground hover:text-accent" onClick={() => setIsOpen(false)}>
-              How It Works
-            </Link>
-            <Link href="/faq" className="text-base font-medium text-foreground hover:text-accent" onClick={() => setIsOpen(false)}>
-              FAQ
             </Link>
             <Link href="/cart" className="w-full" onClick={() => setIsOpen(false)}>
               <button className="btn-liquid relative flex items-center justify-center gap-2 w-full rounded-md bg-accent px-4 py-3 text-sm font-bold text-white shadow-lg shadow-accent/20">
