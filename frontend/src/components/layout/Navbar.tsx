@@ -19,7 +19,7 @@ export default function Navbar() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-background/40 backdrop-blur-3xl shadow-sm transition-all duration-300">
+    <nav className="sticky top-0 z-50 w-full glass-panel !rounded-none !border-x-0 !border-t-0">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <Link href="/" className="flex items-center justify-center bg-white/90 dark:bg-white/90 p-1.5 rounded-2xl transition-all hover:scale-105 shadow-md">
@@ -56,7 +56,7 @@ export default function Navbar() {
           >
             {mounted && theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
-          
+
           {mounted && user ? (
             <div className="flex items-center gap-2 border-l border-surface-border pl-4 ml-2">
               <Link href={user.role === 'admin' ? '/dashboard/admin' : '/dashboard/user'}>
@@ -65,8 +65,8 @@ export default function Navbar() {
                   {user.name.split(' ')[0]}
                 </button>
               </Link>
-              <button 
-                onClick={logout} 
+              <button
+                onClick={logout}
                 className="p-2 text-muted-foreground hover:text-red-500 transition-colors"
                 aria-label="Sign out"
                 title="Sign out"
@@ -106,7 +106,7 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden border-t border-white/10 bg-background/40 px-4 py-4 backdrop-blur-3xl shadow-xl">
+        <div className="md:hidden glass-panel !rounded-none !border-x-0 !border-t-0 px-4 py-4 mt-1">
           <div className="flex flex-col space-y-4">
             <Link href="/catalog" className="text-base font-medium text-foreground hover:text-accent" onClick={() => setIsOpen(false)}>
               Gear Catalog
@@ -118,7 +118,7 @@ export default function Navbar() {
               FAQ
             </Link>
             <Link href="/cart" className="w-full" onClick={() => setIsOpen(false)}>
-              <button className="relative flex items-center justify-center gap-2 w-full rounded-md bg-accent px-4 py-3 text-sm font-bold text-white transition-all hover:bg-accent-hover">
+              <button className="btn-liquid relative flex items-center justify-center gap-2 w-full rounded-md bg-accent px-4 py-3 text-sm font-bold text-white shadow-lg shadow-accent/20">
                 <ShoppingCart className="h-4 w-4" />
                 <span>Cart</span>
                 {mounted && cartItemsCount > 0 && (
@@ -138,7 +138,7 @@ export default function Navbar() {
                     {user.role === 'admin' ? 'Admin Dashboard' : 'My Dashboard'}
                   </button>
                 </Link>
-                <button 
+                <button
                   onClick={() => { logout(); setIsOpen(false); }}
                   className="flex items-center justify-center gap-2 w-full text-sm font-bold text-red-500 hover:text-red-400 py-2 transition-all"
                 >
@@ -150,7 +150,7 @@ export default function Navbar() {
               <div className="border-t border-surface-border pt-4 mt-2">
                 {mounted && (
                   <Link href="/auth/login" className="w-full block" onClick={() => setIsOpen(false)}>
-                    <button className="w-full flex justify-center rounded-md border border-surface-border bg-background px-4 py-3 text-sm font-bold text-foreground hover:bg-surface">
+                    <button className="glass-panel w-full flex justify-center rounded-md px-4 py-3 text-sm font-bold text-foreground">
                       Sign In / Register
                     </button>
                   </Link>

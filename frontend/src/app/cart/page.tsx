@@ -373,6 +373,7 @@ export default function CartPage() {
                               calendarClassName="custom-datepicker"
                               wrapperClassName="w-full"
                               dateFormat="MMM dd, yyyy"
+                              portalId="root-portal"
                             />
                           </div>
 
@@ -392,6 +393,7 @@ export default function CartPage() {
                               calendarClassName="custom-datepicker"
                               wrapperClassName="w-full"
                               dateFormat="MMM dd, yyyy"
+                              portalId="root-portal"
                             />
                           </div>
                           <span className="text-sm font-bold ml-1 text-accent flex-shrink-0 bg-accent/10 px-2 py-0.5 rounded-md">{item.days} days</span>
@@ -527,6 +529,9 @@ export default function CartPage() {
           </div>
         )}
       </div>
+
+      {/* Portal for Datepicker to escape stacking contexts */}
+      <div id="root-portal" className="relative z-[9999]" />
     </div>
   );
 }

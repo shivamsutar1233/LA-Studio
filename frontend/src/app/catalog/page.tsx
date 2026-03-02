@@ -60,7 +60,7 @@ function CatalogContent() {
     if (activeCategory !== "All Gear") {
       result = result.filter(g => g.category === activeCategory);
     }
-    
+
     switch (sortOrder) {
       case "Price: Low to High":
         result.sort((a, b) => a.pricePerDay - b.pricePerDay);
@@ -89,9 +89,9 @@ function CatalogContent() {
           <h1 className="text-4xl font-extrabold tracking-tight text-foreground mb-2">Gear Catalog</h1>
           <p className="text-muted-foreground max-w-2xl">Browse our professional lineup of action cameras, audio equipment, and mounting solutions specifically tested for moto vlogging.</p>
         </div>
-        
+
         <div className="flex items-center gap-3">
-          <select 
+          <select
             className="px-4 py-2 rounded-lg border border-surface-border bg-surface text-sm font-medium appearance-none focus:outline-none focus:ring-1 focus:ring-accent hover:cursor-pointer"
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
@@ -105,14 +105,17 @@ function CatalogContent() {
       </div>
 
       {/* Category Pills */}
-      <div className="flex overflow-x-auto gap-3 pb-4 mb-8 scrollbar-hide shrink-0 w-full">
+      <div className="glass-panel rounded-2xl p-2 flex overflow-x-auto gap-3 pb-2 mb-8 scrollbar-hide shrink-0 w-full md:w-fit">
         {["All Gear", "Camera", "Audio", "Mounts", "Accessories"].map(cat => (
-          <button 
+          <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${activeCategory === cat ? 'bg-accent text-white' : 'bg-surface border border-surface-border hover:border-gray-500 text-foreground'}`}
+            className={`px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${activeCategory === cat
+                ? 'btn-liquid bg-accent text-white shadow-lg shadow-accent/20'
+                : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface/50'
+              }`}
           >
-            {cat === "Camera" ? "Cameras" : cat}
+            <span className="relative z-10">{cat === "Camera" ? "Cameras" : cat}</span>
           </button>
         ))}
       </div>
