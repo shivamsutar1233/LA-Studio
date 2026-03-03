@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import GearCard from "@/components/ui/GearCard";
 import BundleCard from "@/components/ui/BundleCard";
-import { Filter, Loader2, Package, Aperture } from "lucide-react";
+import { Package, Aperture } from "lucide-react";
 import api from '@/lib/api';
 import { useSearchParams, useRouter } from 'next/navigation';
 
@@ -163,7 +163,24 @@ function CatalogContent() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-4">
         {loading ? (
-          <div className="col-span-full py-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-surface border border-surface-border rounded-2xl overflow-hidden flex flex-col">
+              {/* Thumbnail skeleton */}
+              <div className="w-full aspect-[4/3] bg-surface-border/60 animate-pulse" />
+              {/* Content skeleton */}
+              <div className="p-4 flex flex-col gap-3 flex-1">
+                {/* Category badge */}
+                <div className="h-5 w-20 bg-surface-border/60 rounded-full animate-pulse" />
+                {/* Title */}
+                <div className="h-5 w-3/4 bg-surface-border/60 rounded-lg animate-pulse" />
+                {/* Price + button row */}
+                <div className="flex items-center justify-between mt-auto pt-2">
+                  <div className="h-6 w-24 bg-surface-border/60 rounded-lg animate-pulse" />
+                  <div className="h-9 w-28 bg-surface-border/40 rounded-xl animate-pulse" />
+                </div>
+              </div>
+            </div>
+          ))
         ) : filteredItems.length === 0 ? (
           <div className="col-span-full py-20 flex flex-col items-center justify-center text-center">
             <h3 className="text-xl font-bold text-foreground mb-2">No items found</h3>
@@ -183,7 +200,7 @@ function CatalogContent() {
 
 export default function CatalogPage() {
   return (
-    <Suspense fallback={<div className="max-w-7xl mx-auto px-4 py-16 flex justify-center w-full"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+    <Suspense fallback={<div className="max-w-7xl mx-auto px-4 py-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="bg-surface border border-surface-border rounded-2xl overflow-hidden flex flex-col"><div className="w-full aspect-[4/3] bg-surface-border/60 animate-pulse" /><div className="p-4 flex flex-col gap-3"><div className="h-5 w-20 bg-surface-border/60 rounded-full animate-pulse" /><div className="h-5 w-3/4 bg-surface-border/60 rounded-lg animate-pulse" /></div></div>)}</div>}>
       <CatalogContent />
     </Suspense>
   );
