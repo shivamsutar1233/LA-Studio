@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Pagination from '@/components/ui/Pagination';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
-import { Package, CalendarRange, Clock, Edit2, Check, X, User as UserIcon, Mail, Loader2, RefreshCw, CheckCircle, XCircle, Ban } from 'lucide-react';
+import { Package, CalendarRange, Clock, Edit2, Check, X, User as UserIcon, Mail, Loader2, RefreshCw, CheckCircle, XCircle, Ban, KeyRound, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Booking {
@@ -32,11 +32,18 @@ export default function UserDashboard() {
   // Profile Editing State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState('');
-  const [editEmail, setEditEmail] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [gearInfo, setGearInfo] = useState<GearDetails>({});
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Email Change OTP State
+  type EmailChangeStep = 'idle' | 'enter-email' | 'verify-old' | 'verify-new' | 'done';
+  const [emailChangeStep, setEmailChangeStep] = useState<EmailChangeStep>('idle');
+  const [newEmail, setNewEmail] = useState('');
+  const [otpValue, setOtpValue] = useState('');
+  const [emailChangePendingDisplay, setEmailChangePendingDisplay] = useState('');
+  const [isEmailChangePending, setIsEmailChangePending] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -55,7 +62,6 @@ export default function UserDashboard() {
       return;
     } else {
       setEditName(user.name);
-      setEditEmail(user.email);
     }
 
     const fetchDashboardData = async (isRefresh = false) => {
@@ -120,7 +126,7 @@ export default function UserDashboard() {
     try {
       const res = await api.put('/api/users/me', {
         name: editName,
-        email: editEmail
+        email: user?.email // email is now changed via OTP flow only
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -133,6 +139,86 @@ export default function UserDashboard() {
       toast.error(error.response?.data?.message || 'Failed to update profile');
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  // ─── Email Change OTP Handlers ───────────────────────────────────────────────
+  const handleRequestEmailChange = async () => {
+    if (!newEmail || !newEmail.includes('@')) {
+      toast.error('Please enter a valid email address.');
+      return;
+    }
+    setIsEmailChangePending(true);
+    try {
+      const res = await api.post('/api/users/request-email-change', { newEmail }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setEmailChangePendingDisplay(newEmail);
+      setEmailChangeStep('verify-old');
+      setOtpValue('');
+      toast.success(res.data.message);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to send OTP.');
+    } finally {
+      setIsEmailChangePending(false);
+    }
+  };
+
+  const handleVerifyOldOtp = async () => {
+    if (otpValue.length !== 6) { toast.error('Please enter the 6-digit OTP.'); return; }
+    setIsEmailChangePending(true);
+    try {
+      const res = await api.post('/api/users/verify-old-email-otp', { otp: otpValue }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setEmailChangeStep('verify-new');
+      setOtpValue('');
+      toast.success(res.data.message);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Invalid OTP.');
+    } finally {
+      setIsEmailChangePending(false);
+    }
+  };
+
+  const handleVerifyNewOtp = async () => {
+    if (otpValue.length !== 6) { toast.error('Please enter the 6-digit OTP.'); return; }
+    setIsEmailChangePending(true);
+    try {
+      const res = await api.post('/api/users/verify-new-email-otp', { otp: otpValue }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      login(res.data.user, res.data.token);
+      setEmailChangeStep('idle');
+      setNewEmail('');
+      setOtpValue('');
+      toast.success('Email changed successfully!');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Invalid OTP.');
+    } finally {
+      setIsEmailChangePending(false);
+    }
+  };
+
+  const cancelEmailChange = () => {
+    setEmailChangeStep('idle');
+    setNewEmail('');
+    setOtpValue('');
+  };
+
+  const handleResendOtp = async () => {
+    setIsEmailChangePending(true);
+    try {
+      const res = await api.post('/api/users/request-email-change', { newEmail: emailChangePendingDisplay }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setEmailChangeStep('verify-old');
+      setOtpValue('');
+      toast.success('OTP resent! ' + res.data.message);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to resend OTP.');
+    } finally {
+      setIsEmailChangePending(false);
     }
   };
 
@@ -179,7 +265,7 @@ export default function UserDashboard() {
               </button>
             ) : (
               <div className="flex gap-2">
-                <button onClick={() => { setIsEditingProfile(false); setEditName(user?.name || ''); setEditEmail(user?.email || ''); }} className="p-2 bg-surface border border-surface-border rounded-lg text-muted-foreground hover:text-red-500 transition-colors">
+                <button onClick={() => { setIsEditingProfile(false); setEditName(user?.name || ''); cancelEmailChange(); }} className="p-2 bg-surface border border-surface-border rounded-lg text-muted-foreground hover:text-red-500 transition-colors">
                   <X className="h-4 w-4" />
                 </button>
                 <button onClick={handleSaveProfile} disabled={isSavingProfile} className="p-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50">
@@ -211,7 +297,7 @@ export default function UserDashboard() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4 flex-1 flex flex-col justify-center">
+            <div className="space-y-3 flex-1 flex flex-col justify-center">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-1">Name</label>
                 <input
@@ -221,14 +307,93 @@ export default function UserDashboard() {
                   className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                 />
               </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Email</label>
-                <input
-                  type="email"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
-                />
+
+              {/* Email Change Section */}
+              <div className="border border-surface-border rounded-xl p-3 bg-background/50">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email</p>
+                    <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
+                  </div>
+                  {emailChangeStep === 'idle' && (
+                    <button
+                      onClick={() => setEmailChangeStep('enter-email')}
+                      className="text-xs font-bold text-accent hover:underline flex items-center gap-1 shrink-0 ml-2"
+                    >
+                      <KeyRound className="h-3 w-3" /> Change
+                    </button>
+                  )}
+                </div>
+
+                {/* Step: Enter new email */}
+                {emailChangeStep === 'enter-email' && (
+                  <div className="space-y-2 pt-1 border-t border-surface-border">
+                    <p className="text-xs text-muted-foreground mt-2">Enter your new email address:</p>
+                    <input
+                      type="email"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      placeholder="new@email.com"
+                      className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={cancelEmailChange} className="flex-1 text-xs py-2 border border-surface-border rounded-lg text-muted-foreground hover:border-red-500/30 hover:text-red-500 transition-colors">Cancel</button>
+                      <button onClick={handleRequestEmailChange} disabled={isEmailChangePending} className="flex-1 text-xs py-2 bg-accent text-white rounded-lg font-bold hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1">
+                        {isEmailChangePending ? <Loader2 className="h-3 w-3 animate-spin" /> : <><ArrowRight className="h-3 w-3" /> Send OTP</>}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step: Verify OTP from old email */}
+                {emailChangeStep === 'verify-old' && (
+                  <div className="space-y-2 pt-1 border-t border-surface-border">
+                    <p className="text-xs text-muted-foreground mt-2">Enter the OTP sent to <span className="font-semibold text-foreground">{user?.email}</span>:</p>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={otpValue}
+                      onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))}
+                      placeholder="000000"
+                      className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground text-center tracking-[0.5em] font-mono focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={cancelEmailChange} className="flex-1 text-xs py-2 border border-surface-border rounded-lg text-muted-foreground hover:border-red-500/30 hover:text-red-500 transition-colors">Cancel</button>
+                      <button onClick={handleVerifyOldOtp} disabled={isEmailChangePending} className="flex-1 text-xs py-2 bg-accent text-white rounded-lg font-bold hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1">
+                        {isEmailChangePending ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3" /> Verify</>}
+                      </button>
+                    </div>
+                    <button onClick={handleResendOtp} disabled={isEmailChangePending} className="w-full text-center text-xs text-muted-foreground hover:text-accent transition-colors disabled:opacity-50 mt-1">
+                      Didn't receive it? <span className="font-semibold underline">Resend OTP</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Step: Verify OTP from new email */}
+                {emailChangeStep === 'verify-new' && (
+                  <div className="space-y-2 pt-1 border-t border-surface-border">
+                    <p className="text-xs text-muted-foreground mt-2">Enter the OTP sent to <span className="font-semibold text-foreground">{emailChangePendingDisplay}</span>:</p>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={otpValue}
+                      onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))}
+                      placeholder="000000"
+                      className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground text-center tracking-[0.5em] font-mono focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={cancelEmailChange} className="flex-1 text-xs py-2 border border-surface-border rounded-lg text-muted-foreground hover:border-red-500/30 hover:text-red-500 transition-colors">Cancel</button>
+                      <button onClick={handleVerifyNewOtp} disabled={isEmailChangePending} className="flex-1 text-xs py-2 bg-accent text-white rounded-lg font-bold hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1">
+                        {isEmailChangePending ? <Loader2 className="h-3 w-3 animate-spin" /> : <><CheckCircle className="h-3 w-3" /> Confirm Change</>}
+                      </button>
+                    </div>
+                    <button onClick={handleResendOtp} disabled={isEmailChangePending} className="w-full text-center text-xs text-muted-foreground hover:text-accent transition-colors disabled:opacity-50 mt-1">
+                      Didn't receive it? <span className="font-semibold underline">Resend OTP</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -259,14 +259,26 @@ export async function initDb(): Promise<DBAdapter> {
   if (!hasIsEmailVerified) {
     console.log("Migrating users table to include email verification fields...");
     try {
-      await dbAdapter!.exec(`
-        ALTER TABLE users ADD COLUMN isEmailVerified INTEGER DEFAULT 0;
-        ALTER TABLE users ADD COLUMN verificationToken TEXT;
-      `);
+      await dbAdapter!.exec(`ALTER TABLE users ADD COLUMN isEmailVerified INTEGER DEFAULT 0;`);
+      await dbAdapter!.exec(`ALTER TABLE users ADD COLUMN verificationToken TEXT;`);
       // Auto-verify existing users to avoid locking them out
       await dbAdapter!.exec(`UPDATE users SET isEmailVerified = 1;`);
     } catch (e) {
       console.log("Migration warning (email verification):", e);
+    }
+  }
+
+  // Migration for Email Change OTP
+  const hasEmailChangeOtp = userColumns.some((c: any) => c.name === 'emailChangeOtp');
+  if (!hasEmailChangeOtp) {
+    console.log("Migrating users table to include email change OTP fields...");
+    try {
+      await dbAdapter!.exec(`ALTER TABLE users ADD COLUMN pendingEmail TEXT;`);
+      await dbAdapter!.exec(`ALTER TABLE users ADD COLUMN emailChangeOtp TEXT;`);
+      await dbAdapter!.exec(`ALTER TABLE users ADD COLUMN emailChangeOtpExpiry INTEGER;`);
+      await dbAdapter!.exec(`ALTER TABLE users ADD COLUMN emailChangeStep TEXT;`);
+    } catch (e) {
+      console.log("Migration warning (email change OTP):", e);
     }
   }
 
