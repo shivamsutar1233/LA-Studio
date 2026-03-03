@@ -27,6 +27,7 @@ interface AdminBooking {
   aadhaarNumber?: string | null;
   aadhaarUrl?: string | null;
   refundStatus?: string | null;
+  createdAt: string;
 }
 
 interface UserData {
@@ -84,6 +85,51 @@ function AdminDashboard() {
   const [usersPage, setUsersPage] = useState(1);
   const [refundsPage, setRefundsPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
+
+  // Sorting State
+  const [bookingsSort, setBookingsSort] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [inventorySort, setInventorySort] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [bundlesSort, setBundlesSort] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [usersSort, setUsersSort] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [refundsSort, setRefundsSort] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  const handleSort = (tab: 'bookings' | 'inventory' | 'bundles' | 'users' | 'refunds', key: string) => {
+    const updateSort = (currentSort: { key: string; direction: 'asc' | 'desc' } | null) => {
+      if (currentSort?.key === key) {
+        return currentSort.direction === 'asc' ? { key, direction: 'desc' as const } : currentSort.direction === 'desc' ? null : { key, direction: 'asc' as const };
+      }
+      return { key, direction: 'asc' as const };
+    };
+
+    if (tab === 'bookings') setBookingsSort(updateSort(bookingsSort));
+    else if (tab === 'inventory') setInventorySort(updateSort(inventorySort));
+    else if (tab === 'bundles') setBundlesSort(updateSort(bundlesSort));
+    else if (tab === 'users') setUsersSort(updateSort(usersSort));
+    else if (tab === 'refunds') setRefundsSort(updateSort(refundsSort));
+  };
+
+  const sortData = <T extends Record<string, any>>(data: T[], sortConfig: { key: string; direction: 'asc' | 'desc' } | null) => {
+    if (!sortConfig) return data;
+    return [...data].sort((a, b) => {
+      const aVal = a[sortConfig.key];
+      const bVal = b[sortConfig.key];
+
+      if (aVal === bVal) return 0;
+      if (aVal === undefined || aVal === null) return 1;
+      if (bVal === undefined || bVal === null) return -1;
+
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        const val = aVal.localeCompare(bVal);
+        return sortConfig.direction === 'asc' ? val : -val;
+      }
+
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+
+      return 0;
+    });
+  };
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -154,35 +200,47 @@ function AdminDashboard() {
     };
   }, [bookings, users, gears]);
 
+  const processedBookings = useMemo(() => {
+    return bookings.map(b => ({
+      ...b,
+      customerName: users.find(u => u.id === b.userId)?.name || b.customerDetails?.name || 'Guest Checkout'
+    }));
+  }, [bookings, users]);
+
   const paginatedBookings = useMemo(() => {
+    const sorted = sortData(processedBookings, bookingsSort);
     const start = (bookingsPage - 1) * ITEMS_PER_PAGE;
-    return bookings.slice(start, start + ITEMS_PER_PAGE);
-  }, [bookings, bookingsPage]);
+    return sorted.slice(start, start + ITEMS_PER_PAGE);
+  }, [processedBookings, bookingsPage, bookingsSort]);
   const totalBookingsPages = Math.ceil(bookings.length / ITEMS_PER_PAGE) || 1;
 
   const paginatedGears = useMemo(() => {
+    const sorted = sortData(gears, inventorySort);
     const start = (inventoryPage - 1) * ITEMS_PER_PAGE;
-    return gears.slice(start, start + ITEMS_PER_PAGE);
-  }, [gears, inventoryPage]);
+    return sorted.slice(start, start + ITEMS_PER_PAGE);
+  }, [gears, inventoryPage, inventorySort]);
   const totalGearsPages = Math.ceil(gears.length / ITEMS_PER_PAGE) || 1;
 
   const paginatedBundles = useMemo(() => {
+    const sorted = sortData(bundles, bundlesSort);
     const start = (bundlesPage - 1) * ITEMS_PER_PAGE;
-    return bundles.slice(start, start + ITEMS_PER_PAGE);
-  }, [bundles, bundlesPage]);
+    return sorted.slice(start, start + ITEMS_PER_PAGE);
+  }, [bundles, bundlesPage, bundlesSort]);
   const totalBundlesPages = Math.ceil(bundles.length / ITEMS_PER_PAGE) || 1;
 
   const paginatedUsers = useMemo(() => {
+    const sorted = sortData(users, usersSort);
     const start = (usersPage - 1) * ITEMS_PER_PAGE;
-    return users.slice(start, start + ITEMS_PER_PAGE);
-  }, [users, usersPage]);
+    return sorted.slice(start, start + ITEMS_PER_PAGE);
+  }, [users, usersPage, usersSort]);
   const totalUsersPages = Math.ceil(users.length / ITEMS_PER_PAGE) || 1;
 
-  const cancelledBookings = useMemo(() => bookings.filter(b => b.status === 'cancelled'), [bookings]);
+  const cancelledBookings = useMemo(() => processedBookings.filter(b => b.status === 'cancelled'), [processedBookings]);
   const paginatedRefunds = useMemo(() => {
+    const sorted = sortData(cancelledBookings, refundsSort);
     const start = (refundsPage - 1) * ITEMS_PER_PAGE;
-    return cancelledBookings.slice(start, start + ITEMS_PER_PAGE);
-  }, [cancelledBookings, refundsPage]);
+    return sorted.slice(start, start + ITEMS_PER_PAGE);
+  }, [cancelledBookings, refundsPage, refundsSort]);
   const totalRefundsPages = Math.ceil(cancelledBookings.length / ITEMS_PER_PAGE) || 1;
 
   const openModal = (gear?: GearData) => {
@@ -441,11 +499,12 @@ function AdminDashboard() {
                   <table className="w-full text-left border-collapse sticky-header">
                     <thead className="sticky top-0 z-10 bg-surface">
                       <tr className="border-b border-surface-border bg-background/50">
-                        <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">ID</th>
-                        <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Customer</th>
+                        <th onClick={() => handleSort('bookings', 'id')} className="p-4 text-xs font-semibold text-muted-foreground uppercase cursor-pointer hover:bg-surface-border transition-colors">ID {bookingsSort?.key === 'id' && (bookingsSort.direction === 'asc' ? '↑' : '↓')}</th>
+                        <th onClick={() => handleSort('bookings', 'customerName')} className="p-4 text-xs font-semibold text-muted-foreground uppercase cursor-pointer hover:bg-surface-border transition-colors">Customer {bookingsSort?.key === 'customerName' && (bookingsSort.direction === 'asc' ? '↑' : '↓')}</th>
                         <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Item</th>
-                        <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Dates</th>
-                        <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Status</th>
+                        <th onClick={() => handleSort('bookings', 'startDate')} className="p-4 text-xs font-semibold text-muted-foreground uppercase cursor-pointer hover:bg-surface-border transition-colors">Dates {bookingsSort?.key === 'startDate' && (bookingsSort.direction === 'asc' ? '↑' : '↓')}</th>
+                        <th onClick={() => handleSort('bookings', 'createdAt')} className="p-4 text-xs font-semibold text-muted-foreground uppercase cursor-pointer hover:bg-surface-border transition-colors">Created At {bookingsSort?.key === 'createdAt' && (bookingsSort.direction === 'asc' ? '↑' : '↓')}</th>
+                        <th onClick={() => handleSort('bookings', 'status')} className="p-4 text-xs font-semibold text-muted-foreground uppercase cursor-pointer hover:bg-surface-border transition-colors">Status {bookingsSort?.key === 'status' && (bookingsSort.direction === 'asc' ? '↑' : '↓')}</th>
                         <th className="p-4 text-xs font-semibold text-muted-foreground uppercase text-right">Actions</th>
                       </tr>
                     </thead>
@@ -490,7 +549,7 @@ function AdminDashboard() {
                             <td className="p-4 text-sm font-mono text-muted-foreground">#{b.id}</td>
                             <td className="p-4 text-sm font-medium text-foreground">
                               <div className="flex items-center gap-2">
-                                {users.find(u => u.id === b.userId)?.name || b.customerDetails?.name || 'Guest Checkout'}
+                                {(b as any).customerName}
                                 {b.undertakingSigned === 1 && (
                                   <div title="Identity Verified & Undertaking Signed" className="h-4 w-4 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
                                     <CheckCircle className="h-3 w-3 text-green-500" />
@@ -503,7 +562,8 @@ function AdminDashboard() {
                                 {gearListStr}
                               </div>
                             </td>
-                            <td className="p-4 text-sm text-foreground">{b.startDate} to {b.endDate}</td>
+                            <td className="p-4 text-sm text-foreground whitespace-nowrap">{new Date(b.startDate).toLocaleDateString()} to {new Date(b.endDate).toLocaleDateString()}</td>
+                            <td className="p-4 text-sm text-muted-foreground whitespace-nowrap">{new Date(b.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                             <td className="p-4 text-sm">
                               {b.status === 'cancelled' ? (
                                 <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${b.refundStatus === 'processed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
@@ -581,10 +641,10 @@ function AdminDashboard() {
               <table className="w-full text-left border-collapse sticky-header">
                 <thead className="sticky top-0 z-10 bg-surface">
                   <tr className="border-b border-surface-border bg-background/50">
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID</th>
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Item Name</th>
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</th>
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Price/Day</th>
+                    <th onClick={() => handleSort('inventory', 'id')} className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-surface-border transition-colors">ID {inventorySort?.key === 'id' && (inventorySort.direction === 'asc' ? '↑' : '↓')}</th>
+                    <th onClick={() => handleSort('inventory', 'name')} className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-surface-border transition-colors">Item Name {inventorySort?.key === 'name' && (inventorySort.direction === 'asc' ? '↑' : '↓')}</th>
+                    <th onClick={() => handleSort('inventory', 'category')} className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-surface-border transition-colors">Category {inventorySort?.key === 'category' && (inventorySort.direction === 'asc' ? '↑' : '↓')}</th>
+                    <th onClick={() => handleSort('inventory', 'pricePerDay')} className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-surface-border transition-colors">Price/Day {inventorySort?.key === 'pricePerDay' && (inventorySort.direction === 'asc' ? '↑' : '↓')}</th>
                     <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
@@ -647,10 +707,10 @@ function AdminDashboard() {
               <table className="w-full text-left border-collapse sticky-header">
                 <thead className="sticky top-0 z-10 bg-surface">
                   <tr className="border-b border-surface-border bg-background/50">
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID</th>
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bundle Name</th>
+                    <th onClick={() => handleSort('bundles', 'id')} className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-surface-border transition-colors">ID {bundlesSort?.key === 'id' && (bundlesSort.direction === 'asc' ? '↑' : '↓')}</th>
+                    <th onClick={() => handleSort('bundles', 'name')} className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-surface-border transition-colors">Bundle Name {bundlesSort?.key === 'name' && (bundlesSort.direction === 'asc' ? '↑' : '↓')}</th>
                     <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gears Included</th>
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Price/Day</th>
+                    <th onClick={() => handleSort('bundles', 'pricePerDay')} className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-surface-border transition-colors">Price/Day {bundlesSort?.key === 'pricePerDay' && (bundlesSort.direction === 'asc' ? '↑' : '↓')}</th>
                     <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
@@ -716,9 +776,9 @@ function AdminDashboard() {
               <table className="w-full text-left border-collapse sticky-header">
                 <thead className="sticky top-0 z-10 bg-surface">
                   <tr className="border-b border-surface-border bg-background/50">
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID</th>
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name / Email</th>
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Role</th>
+                    <th onClick={() => handleSort('users', 'id')} className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-surface-border transition-colors">ID {usersSort?.key === 'id' && (usersSort.direction === 'asc' ? '↑' : '↓')}</th>
+                    <th onClick={() => handleSort('users', 'name')} className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-surface-border transition-colors">Name / Email {usersSort?.key === 'name' && (usersSort.direction === 'asc' ? '↑' : '↓')}</th>
+                    <th onClick={() => handleSort('users', 'role')} className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right cursor-pointer hover:bg-surface-border transition-colors">Role {usersSort?.key === 'role' && (usersSort.direction === 'asc' ? '↑' : '↓')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-border">
@@ -770,10 +830,11 @@ function AdminDashboard() {
               <table className="w-full text-left border-collapse sticky-header">
                 <thead className="sticky top-0 z-10 bg-surface">
                   <tr className="border-b border-surface-border bg-background/50">
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Order ID</th>
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Customer</th>
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Dates</th>
-                    <th className="p-4 text-xs font-semibold text-muted-foreground uppercase">Refund Status</th>
+                    <th onClick={() => handleSort('refunds', 'id')} className="p-4 text-xs font-semibold text-muted-foreground uppercase cursor-pointer hover:bg-surface-border transition-colors">Order ID {refundsSort?.key === 'id' && (refundsSort.direction === 'asc' ? '↑' : '↓')}</th>
+                    <th onClick={() => handleSort('refunds', 'customerName')} className="p-4 text-xs font-semibold text-muted-foreground uppercase cursor-pointer hover:bg-surface-border transition-colors">Customer {refundsSort?.key === 'customerName' && (refundsSort.direction === 'asc' ? '↑' : '↓')}</th>
+                    <th onClick={() => handleSort('refunds', 'startDate')} className="p-4 text-xs font-semibold text-muted-foreground uppercase cursor-pointer hover:bg-surface-border transition-colors">Dates {refundsSort?.key === 'startDate' && (refundsSort.direction === 'asc' ? '↑' : '↓')}</th>
+                    <th onClick={() => handleSort('refunds', 'createdAt')} className="p-4 text-xs font-semibold text-muted-foreground uppercase cursor-pointer hover:bg-surface-border transition-colors">Created At {refundsSort?.key === 'createdAt' && (refundsSort.direction === 'asc' ? '↑' : '↓')}</th>
+                    <th onClick={() => handleSort('refunds', 'refundStatus')} className="p-4 text-xs font-semibold text-muted-foreground uppercase cursor-pointer hover:bg-surface-border transition-colors">Refund Status {refundsSort?.key === 'refundStatus' && (refundsSort.direction === 'asc' ? '↑' : '↓')}</th>
                     <th className="p-4 text-xs font-semibold text-muted-foreground uppercase text-right">Actions</th>
                   </tr>
                 </thead>
@@ -782,9 +843,10 @@ function AdminDashboard() {
                     <tr key={b.id} className="hover:bg-background/30 transition-colors">
                       <td className="p-4 text-sm font-mono text-muted-foreground">#{b.id}</td>
                       <td className="p-4 text-sm font-medium text-foreground">
-                        {users.find(u => u.id === b.userId)?.name || b.customerDetails?.name || 'Guest Checkout'}
+                        {(b as any).customerName}
                       </td>
-                      <td className="p-4 text-sm text-foreground">{b.startDate} to {b.endDate}</td>
+                      <td className="p-4 text-sm text-foreground whitespace-nowrap">{new Date(b.startDate).toLocaleDateString()} to {new Date(b.endDate).toLocaleDateString()}</td>
+                      <td className="p-4 text-sm text-muted-foreground whitespace-nowrap">{new Date(b.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                       <td className="p-4 text-sm">
                         <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${b.refundStatus === 'processed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
                           'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
