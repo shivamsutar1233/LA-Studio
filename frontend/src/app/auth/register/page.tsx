@@ -13,9 +13,9 @@ function RegisterForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   // Hidden field to allow testing admin flow easily without DB seeding scripts
-  const [isAdmin, setIsAdmin] = useState(false); 
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParams = searchParams.get('redirect');
@@ -24,15 +24,15 @@ function RegisterForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post('/api/auth/register', { 
-        name, 
-        email, 
-        password, 
-        role: isAdmin ? 'admin' : 'user' 
+      await api.post('/api/auth/register', {
+        name,
+        email,
+        password,
+        role: isAdmin ? 'admin' : 'user'
       });
-      
-      toast.success('Registration Successful', { description: `You can now sign in.` });
-      // Auto redirect to login, preserving any redirect param
+
+      toast.success('Registration Successful', { description: `Please check your email to verify your account before signing in.` });
+      // Redirect to login where they will be blocked until verified
       router.push(`/auth/login${redirectParams ? `?redirect=${encodeURIComponent(redirectParams)}` : ''}`);
     } catch (error: any) {
       toast.error('Registration Failed', { description: error.response?.data?.message || 'Something went wrong.' });
@@ -48,12 +48,12 @@ function RegisterForm() {
           <h1 className="text-3xl font-extrabold text-foreground mb-2">Create Account</h1>
           <p className="text-muted-foreground text-sm">Join Lean Angle Studio to rent premium gear.</p>
         </div>
-        
+
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Full Name</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -63,8 +63,8 @@ function RegisterForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Email</label>
-            <input 
-              type="email" 
+            <input
+              type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -74,8 +74,8 @@ function RegisterForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Password</label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -84,7 +84,7 @@ function RegisterForm() {
               minLength={6}
             />
           </div>
-          
+
           {/* Dev toggle for testing Admin flows */}
           {/* <div className="flex items-center gap-2 pt-2">
             <input 
@@ -96,16 +96,16 @@ function RegisterForm() {
             />
             <label htmlFor="adminToggle" className="text-sm text-muted-foreground">Register as Admin (For Testing)</label>
           </div> */}
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             disabled={loading}
             className="w-full py-3 px-4 mt-2 bg-accent text-white font-bold rounded-xl hover:bg-accent-hover transition-colors disabled:opacity-50"
           >
             {loading ? <><Loader2 className="h-5 w-5 animate-spin mr-2 inline" /> Creating...</> : 'Sign Up'}
           </button>
         </form>
-        
+
         <div className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account?{' '}
           <Link href={`/auth/login${redirectParams ? `?redirect=${encodeURIComponent(redirectParams)}` : ''}`} className="text-accent font-semibold hover:underline">

@@ -150,7 +150,9 @@ export async function initDb(): Promise<DBAdapter> {
       email TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
       password TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'user'
+      role TEXT NOT NULL DEFAULT 'user',
+      isEmailVerified INTEGER DEFAULT 0,
+      verificationToken TEXT
     );
 
     CREATE TABLE IF NOT EXISTS gears (
@@ -248,6 +250,23 @@ export async function initDb(): Promise<DBAdapter> {
       await dbAdapter!.exec(`ALTER TABLE bookings ADD COLUMN refundStatus TEXT;`);
     } catch (e) {
       console.log("Migration warning (refundStatus):", e);
+    }
+  }
+
+  // Migration for Email Verification
+  const userColumns = await dbAdapter!.all("PRAGMA table_info(users)");
+  const hasIsEmailVerified = userColumns.some((c: any) => c.name === 'isEmailVerified');
+  if (!hasIsEmailVerified) {
+    console.log("Migrating users table to include email verification fields...");
+    try {
+      await dbAdapter!.exec(`
+        ALTER TABLE users ADD COLUMN isEmailVerified INTEGER DEFAULT 0;
+        ALTER TABLE users ADD COLUMN verificationToken TEXT;
+      `);
+      // Auto-verify existing users to avoid locking them out
+      await dbAdapter!.exec(`UPDATE users SET isEmailVerified = 1;`);
+    } catch (e) {
+      console.log("Migration warning (email verification):", e);
     }
   }
 
