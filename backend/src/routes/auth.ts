@@ -4,6 +4,9 @@ import jwt from "jsonwebtoken";
 import { getDb } from "../database";
 import { authenticateToken } from "../middleware/authMiddleware";
 import { sendVerificationEmail } from "../utils/mailer";
+import { sendOtpEmail } from "../utils/mailer";
+
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_for_dev_only";
@@ -101,3 +104,93 @@ router.get("/me", authenticateToken, (req: Request, res: Response) => {
 });
 
 export default router;
+
+// ─── Forgot Password (OTP-based) ───────────────────────────────────────────
+
+// Step 1: Request password reset OTP
+router.post("/forgot-password", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+    if (!email) { res.status(400).json({ message: "Email is required" }); return; }
+
+    const db = await getDb();
+    const user = await db.get('SELECT id, name, email FROM users WHERE email = ?', email);
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      res.json({ message: "If that email is registered, an OTP will be sent." });
+      return;
+    }
+
+    const otp = generateOtp();
+    const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await db.run('UPDATE users SET resetPasswordToken = ?, resetPasswordExpiry = ? WHERE id = ?', [otp, expiry, user.id]);
+    await sendOtpEmail(user.email, user.name, otp, expiry);
+
+    res.json({ message: "If that email is registered, an OTP will be sent." });
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Step 2: Verify OTP (without changing password yet)
+router.post("/verify-reset-otp", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, otp } = req.body;
+    const db = await getDb();
+    const user = await db.get('SELECT id, resetPasswordToken, resetPasswordExpiry FROM users WHERE email = ?', email);
+
+    if (!user || !user.resetPasswordToken) {
+      res.status(400).json({ message: "Invalid request. Please start the process again." }); return;
+    }
+    if (Date.now() > Number(user.resetPasswordExpiry)) {
+      res.status(400).json({ message: "OTP has expired. Please request a new one." }); return;
+    }
+    if (String(user.resetPasswordToken) !== String(otp)) {
+      res.status(400).json({ message: "Invalid OTP. Please check and try again." }); return;
+    }
+
+    res.json({ message: "OTP verified. You can now set a new password." });
+  } catch (error) {
+    console.error("Verify Reset OTP Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Step 3: Reset password (re-validates OTP then updates password)
+router.post("/reset-password", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      res.status(400).json({ message: "Password must be at least 6 characters." }); return;
+    }
+
+    const db = await getDb();
+    const user = await db.get('SELECT id, resetPasswordToken, resetPasswordExpiry FROM users WHERE email = ?', email);
+
+    if (!user || !user.resetPasswordToken) {
+      res.status(400).json({ message: "Invalid request. Please start the process again." }); return;
+    }
+    if (Date.now() > Number(user.resetPasswordExpiry)) {
+      res.status(400).json({ message: "OTP has expired. Please request a new one." }); return;
+    }
+    if (String(user.resetPasswordToken) !== String(otp)) {
+      res.status(400).json({ message: "Invalid OTP." }); return;
+    }
+
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await db.run(
+      'UPDATE users SET password = ?, resetPasswordToken = NULL, resetPasswordExpiry = NULL WHERE id = ?',
+      [hashedPassword, user.id]
+    );
+
+    res.json({ message: "Password has been reset successfully." });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});

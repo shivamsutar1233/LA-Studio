@@ -45,12 +45,12 @@ function LoginForm() {
           <h1 className="text-3xl font-extrabold text-foreground mb-2">Welcome Back</h1>
           <p className="text-muted-foreground text-sm">Sign in to your Lean Angle account.</p>
         </div>
-        
+
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Email</label>
-            <input 
-              type="email" 
+            <input
+              type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -59,9 +59,14 @@ function LoginForm() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Password</label>
-            <input 
-              type="password" 
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-foreground">Password</label>
+              <Link href="/auth/forgot-password" className="text-xs text-accent hover:underline font-medium">
+                Forgot password?
+              </Link>
+            </div>
+            <input
+              type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -69,16 +74,16 @@ function LoginForm() {
               placeholder="••••••••"
             />
           </div>
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             disabled={loading}
             className="w-full py-3 px-4 bg-accent text-white font-bold rounded-xl hover:bg-accent-hover transition-colors disabled:opacity-50"
           >
             {loading ? <><Loader2 className="h-5 w-5 animate-spin mr-2 inline" /> Signing in...</> : 'Sign In'}
           </button>
         </form>
-        
+
         <div className="mt-6 text-center text-sm text-muted-foreground">
           Don't have an account?{' '}
           <Link href={`/auth/register${redirectParams ? `?redirect=${encodeURIComponent(redirectParams)}` : ''}`} className="text-accent font-semibold hover:underline">
