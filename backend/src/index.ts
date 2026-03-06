@@ -19,6 +19,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://leananglestudio.shop",
   "https://www.leananglestudio.shop",
+  "https://mobilela-studio.vercel.app/"
 ].filter(Boolean);
 
 app.use(cors({

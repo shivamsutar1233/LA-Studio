@@ -4,12 +4,10 @@ const config: CapacitorConfig = {
   appId: 'com.lastudio.mobile',
   appName: 'LA Studio',
   webDir: 'out',
-  /* 
   server: {
-    url: 'http://192.168.1.13:3000',
+    url: 'https://mobilela-studio.vercel.app/',
     cleartext: true
   }
-  */
 };
 
 export default config;
