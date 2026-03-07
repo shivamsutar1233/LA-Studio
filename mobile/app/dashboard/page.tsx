@@ -42,6 +42,7 @@ export default function UserDashboard() {
   const [gearInfo, setGearInfo] = useState<GearDetails>({});
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
 
   // Email Change OTP State
   type EmailChangeStep = 'idle' | 'enter-email' | 'verify-old' | 'verify-new' | 'done';
@@ -65,6 +66,9 @@ export default function UserDashboard() {
 
     if (!user) {
       router.push('/auth/login');
+      return;
+    } else if (user.role === 'admin') {
+      router.push('/dashboard/admin');
       return;
     } else {
       setEditName(user.name);
@@ -388,7 +392,11 @@ export default function UserDashboard() {
             })();
 
             return (
-              <div key={booking.id} className="bg-surface border border-surface-border rounded-3xl p-5">
+              <div 
+                key={booking.id} 
+                className={`bg-surface border rounded-3xl p-5 transition-all cursor-pointer ${expandedBookingId === booking.id ? 'border-accent shadow-md' : 'border-surface-border hover:border-accent/50'}`}
+                onClick={() => setExpandedBookingId(prev => prev === booking.id ? null : booking.id)}
+              >
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-2">
                     <Hash className="h-3 w-3 text-muted-foreground" />
@@ -403,19 +411,69 @@ export default function UserDashboard() {
                 </div>
 
                 <h3 className="text-lg font-black text-foreground mb-1 leading-tight">{gearNames}</h3>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-4">{booking.startDate} - {booking.endDate}</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-4">{booking.startDate} to {booking.endDate}</p>
 
                 <div className="flex justify-between items-center pt-4 border-t border-surface-border/50">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                     {booking.status === 'confirmed' && booking.undertakingSigned !== 1 && (
-                      <button onClick={() => router.push(`/dashboard/user/undertaking?id=${booking.id}`)} className="text-[10px] font-bold text-accent bg-accent/10 px-3 py-1.5 rounded-lg">Sign Doc</button>
+                      <button onClick={() => router.push(`/dashboard/user/undertaking?id=${booking.id}`)} className="text-[10px] font-bold text-accent bg-accent/10 px-3 py-1.5 rounded-lg hover:bg-accent hover:text-white transition-colors">Sign Doc</button>
                     )}
                     {(booking.status === 'pending' || booking.status === 'confirmed') && (
-                      <button onClick={() => handleCancelBooking(booking.id)} className="text-[10px] font-bold text-red-500 bg-red-500/10 px-3 py-1.5 rounded-lg">Cancel</button>
+                      <button onClick={() => handleCancelBooking(booking.id)} className="text-[10px] font-bold text-red-500 bg-red-500/10 px-3 py-1.5 rounded-lg hover:bg-red-500 hover:text-white transition-colors">Cancel</button>
                     )}
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expandedBookingId === booking.id ? 'rotate-90 text-accent' : ''}`} />
                 </div>
+
+                {expandedBookingId === booking.id && (
+                  <div className="pt-4 mt-4 border-t border-surface-border/50 animate-in fade-in slide-in-from-top-2" onClick={e => e.stopPropagation()}>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Order Details</p>
+                    <div className="space-y-2 mb-4">
+                      {(() => {
+                        try {
+                          const ids = JSON.parse(booking.gearIds || '[]');
+                          return ids.map((item: any, i: number) => {
+                            const isString = typeof item === 'string';
+                            const name = isString ? (gearInfo[item]?.name || 'Item') : item.name;
+                            const thumbnail = isString ? gearInfo[item]?.thumbnail : undefined;
+                            return (
+                              <div key={i} className="flex items-center gap-3 bg-background p-2 rounded-xl border border-surface-border text-sm">
+                                <div className="w-10 h-10 bg-surface rounded-lg flex items-center justify-center overflow-hidden shrink-0">
+                                  {thumbnail ? (
+                                    <img src={thumbnail} alt={name} className="w-full h-full object-contain p-1" />
+                                  ) : (
+                                    <Package className="h-4 w-4 text-muted-foreground" />
+                                  )}
+                                </div>
+                                <span className="font-bold text-foreground text-xs">{name}</span>
+                              </div>
+                            );
+                          });
+                        } catch { return null; }
+                      })()}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground space-y-1 bg-background p-3 rounded-xl border border-surface-border">
+                      <div className="flex justify-between">
+                        <span className="font-bold uppercase">Booking ID</span>
+                        <span className="text-foreground font-mono">{booking.id}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-bold uppercase">Created On</span>
+                        <span className="text-foreground">{new Date(booking.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-bold uppercase">Signed Status</span>
+                        <span className="text-foreground">{booking.undertakingSigned === 1 ? 'Signed' : 'Pending'}</span>
+                      </div>
+                      {booking.refundStatus && (
+                        <div className="flex justify-between">
+                          <span className="font-bold uppercase text-orange-500">Refund</span>
+                          <span className="text-foreground uppercase text-orange-500">{booking.refundStatus}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
