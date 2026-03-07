@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import MobileLayout from "@/components/layout/MobileLayout";
 import { Toaster } from "sonner";
 import Script from "next/script";
+import CapacitorBackButton from "@/components/CapacitorBackButton";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -44,6 +45,7 @@ export default function RootLayout({
             {children}
           </MobileLayout>
           <Toaster position="top-center" theme="system" />
+          <CapacitorBackButton />
           <div id="root-portal" className="relative z-[9999]" />
         </ThemeProvider>
         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
