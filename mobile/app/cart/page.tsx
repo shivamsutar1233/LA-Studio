@@ -207,6 +207,7 @@ export default function CartPage() {
         image: "https://ab2bbkrtuubturud.public.blob.vercel-storage.com/product_images/1771907071468-n7j05b1-Lean%20Angle%20Logo%20V2%20.png",
         order_id: orderData.id,
         handler: async function (response: any) {
+          setIsCheckingOut(true);
           // 4. Verify Payment
           try {
             await api.post('/api/payment/verify', {
@@ -243,6 +244,8 @@ export default function CartPage() {
           } catch (verificationError) {
             console.error('Payment Verification Failed', verificationError);
             toast.error('Verification failed', { description: 'Please contact support.' });
+          }finally {
+            setIsCheckingOut(false);
           }
         },
         prefill: {
@@ -314,7 +317,7 @@ export default function CartPage() {
                           <p className="text-xs font-bold text-accent tracking-wider uppercase mb-1">{item.category}</p>
                           <h3 className="text-xl font-bold text-foreground leading-tight">{item.name}</h3>
                         </div>
-                        <button onClick={() => removeFromCart(item.id)} className="text-muted-foreground hover:text-accent transition-colors">
+                        <button onClick={() => removeFromCart(item.id)} disabled={isCheckingOut} className="text-muted-foreground hover:text-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                           <Trash2 className="h-5 w-5" />
                         </button>
                       </div>
@@ -368,41 +371,43 @@ export default function CartPage() {
                         <div className="flex flex-col gap-2 w-full">
                           <div className="flex items-center gap-2">
                             <div className="relative flex-1">
-                              <DatePicker
-                                selected={item.startDate ? parseISO(item.startDate) : null}
-                                onChange={(date: Date | null) => handleDateChange(item.id, 'startDate', date ? format(date, 'yyyy-MM-dd') : '', item)}
-                                selectsStart
-                                startDate={item.startDate ? parseISO(item.startDate) : undefined}
-                                endDate={item.endDate ? parseISO(item.endDate) : undefined}
-                                minDate={new Date()}
-                                excludeDateIntervals={bookedDatesMap[item.gearId] || []}
-                                placeholderText="Start"
-                                className="w-full px-2 py-1.5 text-xs font-medium rounded-lg bg-surface border border-surface-border text-foreground hover:border-accent/50 focus:ring-accent focus:border-accent transition-colors cursor-pointer text-center"
-                                calendarClassName="custom-datepicker"
-                                wrapperClassName="w-full"
-                                dateFormat="MMM dd"
-                                portalId="root-portal"
-                              />
+                                <DatePicker
+                                  selected={item.startDate ? parseISO(item.startDate) : null}
+                                  onChange={(date: Date | null) => handleDateChange(item.id, 'startDate', date ? format(date, 'yyyy-MM-dd') : '', item)}
+                                  selectsStart
+                                  startDate={item.startDate ? parseISO(item.startDate) : undefined}
+                                  endDate={item.endDate ? parseISO(item.endDate) : undefined}
+                                  minDate={new Date()}
+                                  excludeDateIntervals={bookedDatesMap[item.gearId] || []}
+                                  placeholderText="Start"
+                                  className="w-full px-2 py-1.5 text-xs font-medium rounded-lg bg-surface border border-surface-border text-foreground hover:border-accent/50 focus:ring-accent focus:border-accent transition-colors cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                  calendarClassName="custom-datepicker"
+                                  wrapperClassName="w-full"
+                                  dateFormat="MMM dd"
+                                  portalId="root-portal"
+                                  disabled={isCheckingOut}
+                                />
                             </div>
 
                             <span className="text-muted-foreground text-xs shrink-0">&rarr;</span>
 
                             <div className="relative flex-1">
-                              <DatePicker
-                                selected={item.endDate ? parseISO(item.endDate) : null}
-                                onChange={(date: Date | null) => handleDateChange(item.id, 'endDate', date ? format(date, 'yyyy-MM-dd') : '', item)}
-                                selectsEnd
-                                startDate={item.startDate ? parseISO(item.startDate) : undefined}
-                                endDate={item.endDate ? parseISO(item.endDate) : undefined}
-                                minDate={item.startDate ? parseISO(item.startDate) : new Date()}
-                                excludeDateIntervals={bookedDatesMap[item.gearId] || []}
-                                placeholderText="End"
-                                className="w-full px-2 py-1.5 text-xs font-medium rounded-lg bg-surface border border-surface-border text-foreground hover:border-accent/50 focus:ring-accent focus:border-accent transition-colors cursor-pointer text-center"
-                                calendarClassName="custom-datepicker"
-                                wrapperClassName="w-full"
-                                dateFormat="MMM dd"
-                                portalId="root-portal"
-                              />
+                                <DatePicker
+                                  selected={item.endDate ? parseISO(item.endDate) : null}
+                                  onChange={(date: Date | null) => handleDateChange(item.id, 'endDate', date ? format(date, 'yyyy-MM-dd') : '', item)}
+                                  selectsEnd
+                                  startDate={item.startDate ? parseISO(item.startDate) : undefined}
+                                  endDate={item.endDate ? parseISO(item.endDate) : undefined}
+                                  minDate={item.startDate ? parseISO(item.startDate) : new Date()}
+                                  excludeDateIntervals={bookedDatesMap[item.gearId] || []}
+                                  placeholderText="End"
+                                  className="w-full px-2 py-1.5 text-xs font-medium rounded-lg bg-surface border border-surface-border text-foreground hover:border-accent/50 focus:ring-accent focus:border-accent transition-colors cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                  calendarClassName="custom-datepicker"
+                                  wrapperClassName="w-full"
+                                  dateFormat="MMM dd"
+                                  portalId="root-portal"
+                                  disabled={isCheckingOut}
+                                />
                             </div>
                             <span className="text-xs font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-md shrink-0">{item.days}d</span>
                           </div>
@@ -411,9 +416,9 @@ export default function CartPage() {
 
                         <div className="flex items-center justify-between w-full mt-2">
                           <div className="flex items-center gap-1 bg-background border border-surface-border rounded-lg p-1">
-                            <button onClick={() => updateCartItemQuantity(item.id, Math.max(1, item.quantity - 1))} className="p-1 hover:bg-surface rounded text-muted-foreground hover:text-foreground transition-colors"><Minus className="h-3 w-3" /></button>
+                            <button onClick={() => updateCartItemQuantity(item.id, Math.max(1, item.quantity - 1))} disabled={isCheckingOut} className="p-1 hover:bg-surface rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><Minus className="h-3 w-3" /></button>
                             <span className="w-6 text-center text-xs font-bold text-foreground">{item.quantity}</span>
-                            <button onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)} className="p-1 hover:bg-surface rounded text-muted-foreground hover:text-foreground transition-colors"><Plus className="h-3 w-3" /></button>
+                            <button onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)} disabled={isCheckingOut} className="p-1 hover:bg-surface rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><Plus className="h-3 w-3" /></button>
                           </div>
                           <span className="text-lg font-black text-foreground">₹{item.pricePerDay * item.days * item.quantity}</span>
                         </div>
@@ -440,7 +445,7 @@ export default function CartPage() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-foreground">Delivery Address</h2>
                   {addresses.length > 0 && !isAddingAddress && (
-                    <button onClick={() => setIsAddingAddress(true)} className="text-xs text-accent hover:text-accent-hover font-bold transition-colors">
+                    <button onClick={() => setIsAddingAddress(true)} disabled={isCheckingOut} className="text-xs text-accent hover:text-accent-hover font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                       + Add New
                     </button>
                   )}
@@ -448,17 +453,20 @@ export default function CartPage() {
 
                 {isAddingAddress || addresses.length === 0 ? (
                   <form onSubmit={handleSaveNewAddress} className="space-y-3">
-                    <input type="text" required placeholder="Street Address" value={newAddress.street} onChange={e => setNewAddress({ ...newAddress, street: e.target.value })} className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent" />
+                    <input type="text" required placeholder="Street Address" value={newAddress.street} onChange={e => setNewAddress({ ...newAddress, street: e.target.value })} disabled={isCheckingOut} className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed" />
                     <div className="grid grid-cols-2 gap-3">
-                      <input type="text" required placeholder="City" value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })} className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent" />
-                      <input type="text" required placeholder="State" value={newAddress.state} onChange={e => setNewAddress({ ...newAddress, state: e.target.value })} className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent" />
+                      <input type="text" required placeholder="City" value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })} disabled={isCheckingOut} className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed" />
+                      <input type="text" required placeholder="State" value={newAddress.state} onChange={e => setNewAddress({ ...newAddress, state: e.target.value })} disabled={isCheckingOut} className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed" />
                     </div>
-                    <input type="text" required placeholder="ZIP Code" value={newAddress.zip} onChange={e => setNewAddress({ ...newAddress, zip: e.target.value })} className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent" />
+                    <input type="text" required placeholder="ZIP Code" value={newAddress.zip} onChange={e => setNewAddress({ ...newAddress, zip: e.target.value })} disabled={isCheckingOut} className="w-full bg-background border border-surface-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed" />
                     <div className="flex gap-2 pt-2">
                       {addresses.length > 0 && (
-                        <button type="button" onClick={() => setIsAddingAddress(false)} className="flex-1 bg-background py-2 rounded-lg font-bold text-sm hover:bg-surface-border transition-colors">Cancel</button>
+                        <button type="button" onClick={() => setIsAddingAddress(false)} disabled={isCheckingOut} className="flex-1 bg-background py-2 rounded-lg font-bold text-sm hover:bg-surface-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Cancel</button>
                       )}
-                      <button type="submit" className="flex-1 bg-accent text-white py-2 rounded-lg font-bold text-sm hover:bg-accent-hover transition-colors shadow-lg shadow-accent/20">Save Address</button>
+                      <button type="submit" disabled={isCheckingOut} className="flex-1 bg-accent text-white py-2 rounded-lg font-bold text-sm hover:bg-accent-hover transition-colors shadow-lg shadow-accent/20 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isCheckingOut && <Loader2 className="h-4 w-4 animate-spin inline" />}
+                        Save Address
+                      </button>
                     </div>
                   </form>
                 ) : (
@@ -466,8 +474,8 @@ export default function CartPage() {
                     {addresses.map(addr => (
                       <div
                         key={addr.id}
-                        onClick={() => setSelectedAddressId(addr.id)}
-                        className={`p-3 rounded-xl border cursor-pointer transition-all ${selectedAddressId === addr.id ? 'border-accent bg-accent/5' : 'border-surface-border bg-background hover:border-accent/40'}`}
+                        onClick={() => !isCheckingOut && setSelectedAddressId(addr.id)}
+                        className={`p-3 rounded-xl border transition-all ${isCheckingOut ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${selectedAddressId === addr.id ? 'border-accent bg-accent/5' : 'border-surface-border bg-background hover:border-accent/40'}`}
                       >
                         <div className="flex items-center gap-3">
                           <div className={`h-3 w-3 rounded-full border flex items-center justify-center shrink-0 ${selectedAddressId === addr.id ? 'border-accent bg-accent' : 'border-muted-foreground'}`}>
@@ -510,8 +518,9 @@ export default function CartPage() {
                   disabled={cartItems.length === 0 || isCheckingOut || isValidatingCart || cartValidationResult?.valid === false}
                   className="w-full flex items-center justify-center gap-2 bg-accent text-white px-6 py-4 rounded-2xl font-bold text-lg hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
+                  {(isCheckingOut || isValidatingCart) && <Loader2 className="h-5 w-5 animate-spin" />}
                   <span>{isValidatingCart ? 'Validating...' : isCheckingOut ? 'Processing...' : 'Book Now'}</span>
-                  <ChevronRight className="h-5 w-5" />
+                  {!(isCheckingOut || isValidatingCart) && <ChevronRight className="h-5 w-5" />}
                 </button>
               ) : (
                 <Link
