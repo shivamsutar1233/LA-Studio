@@ -87,9 +87,6 @@ function AdminDashboard() {
   const [refundsPage, setRefundsPage] = useState(1);
   const ITEMS_PER_PAGE = 8; // Adapted for mobile view
 
-  // Expanded card tracking
-  const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
-
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGear, setEditingGear] = useState<GearData | null>(null);
@@ -417,8 +414,8 @@ function AdminDashboard() {
                  {paginatedBookings.map((b) => (
                     <div 
                       key={b.id} 
-                      className={`bg-surface border rounded-3xl p-5 transition-all cursor-pointer ${expandedBookingId === b.id ? 'border-accent shadow-md' : 'border-surface-border hover:border-accent/50'}`}
-                      onClick={() => setExpandedBookingId(prev => prev === b.id ? null : b.id)}
+                      className="bg-surface border border-surface-border hover:border-accent/50 rounded-3xl p-5 transition-all cursor-pointer"
+                      onClick={() => router.push(`/dashboard/admin/booking?id=${b.id}`)}
                     >
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex flex-col">
@@ -455,23 +452,8 @@ function AdminDashboard() {
                             </>
                           )}
                         </div>
-                        <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expandedBookingId === b.id ? 'rotate-90 text-accent' : ''}`} />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
                       </div>
-
-                      {expandedBookingId === b.id && (
-                        <div className="pt-4 mt-4 border-t border-surface-border/50 animate-in fade-in slide-in-from-top-2" onClick={e => e.stopPropagation()}>
-                          <div className="text-[10px] text-muted-foreground space-y-1 bg-background p-3 rounded-xl border border-surface-border">
-                            <div className="flex justify-between">
-                              <span className="font-bold uppercase">Booking ID</span>
-                              <span className="text-foreground font-mono">{b.id}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-bold uppercase">Created On</span>
-                              <span className="text-foreground">{new Date(b.createdAt).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                  ))}
                  <div className="pt-2">

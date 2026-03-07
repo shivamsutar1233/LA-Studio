@@ -187,10 +187,75 @@ router.get("/bookings", authenticateToken, async (req: Request, res: Response) =
   const user = (req as any).user;
   try {
     const db = await getDb();
-    const userBookings = await db.all('SELECT * FROM bookings WHERE userId = ? ORDER BY createdAt DESC', user.id);
-    res.json(userBookings);
+    const userBookings = await db.all(`
+      SELECT b.*, 
+             a.street as addressStreet, 
+             a.city as addressCity, 
+             a.state as addressState, 
+             a.zip as addressZip 
+      FROM bookings b 
+      LEFT JOIN addresses a ON b.addressId = a.id 
+      WHERE b.userId = ? 
+      ORDER BY b.createdAt DESC
+    `, user.id);
+    
+    const formattedBookings = userBookings.map(b => {
+       const { addressStreet, addressCity, addressState, addressZip, ...rest } = b;
+       let addressObj = null;
+       if (b.addressId && addressStreet) {
+         addressObj = {
+            id: b.addressId,
+            street: addressStreet,
+            city: addressCity,
+            state: addressState,
+            zip: addressZip
+         };
+       }
+       return { ...rest, deliveryAddress: addressObj };
+    });
+    
+    res.json(formattedBookings);
   } catch (err) {
     res.status(500).json({ message: "Error fetching bookings" });
+  }
+});
+
+router.get("/bookings/:id", authenticateToken, async (req: Request, res: Response): Promise<void> => {
+  const user = (req as any).user;
+  const bookingId = req.params.id;
+  try {
+    const db = await getDb();
+    const b = await db.get(`
+      SELECT b.*, 
+             a.street as addressStreet, 
+             a.city as addressCity, 
+             a.state as addressState, 
+             a.zip as addressZip 
+      FROM bookings b 
+      LEFT JOIN addresses a ON b.addressId = a.id 
+      WHERE b.id = ? AND b.userId = ?
+    `, [bookingId, user.id]);
+
+    if (!b) {
+      res.status(404).json({ message: "Booking not found" });
+      return;
+    }
+
+    const { addressStreet, addressCity, addressState, addressZip, ...rest } = b;
+    let addressObj = null;
+    if (b.addressId && addressStreet) {
+      addressObj = {
+         id: b.addressId,
+         street: addressStreet,
+         city: addressCity,
+         state: addressState,
+         zip: addressZip
+      };
+    }
+    res.json({ ...rest, deliveryAddress: addressObj });
+  } catch (err) {
+    console.error("Fetch Booking Error:", err);
+    res.status(500).json({ message: "Error fetching booking details" });
   }
 });
 

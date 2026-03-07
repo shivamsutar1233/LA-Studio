@@ -72,6 +72,48 @@ router.get("/bookings", authenticateToken, requireAdmin, async (req: Request, re
   }
 });
 
+router.get("/bookings/:id", authenticateToken, requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const db = await getDb();
+    
+    const b = await db.get(`
+      SELECT b.*, 
+             a.street as addressStreet, 
+             a.city as addressCity, 
+             a.state as addressState, 
+             a.zip as addressZip 
+      FROM bookings b 
+      LEFT JOIN addresses a ON b.addressId = a.id 
+      WHERE b.id = ?
+    `, [req.params.id]);
+
+    if (!b) {
+      res.status(404).json({ message: "Booking not found" });
+      return;
+    }
+
+    const { addressStreet, addressCity, addressState, addressZip, ...rest } = b;
+    let addressObj = null;
+    if (b.addressId && addressStreet) {
+      addressObj = {
+         id: b.addressId,
+         street: addressStreet,
+         city: addressCity,
+         state: addressState,
+         zip: addressZip
+      };
+    }
+    
+    // Also fetch the customer's User record just in case
+    const customer = await db.get('SELECT id, email, name, role FROM users WHERE id = ?', b.userId);
+
+    res.json({ ...rest, deliveryAddress: addressObj, customer });
+  } catch (err) {
+    console.error("Admin Fetch Booking Error:", err);
+    res.status(500).json({ message: "Error fetching booking details" });
+  }
+});
+
 router.put("/bookings/:id/status", authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { status } = req.body;
