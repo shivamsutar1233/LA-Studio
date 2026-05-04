@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import api from '@/lib/api';
+import BundleCard from '@/components/ui/BundleCard';
 
 export default function FeaturedBundlesSection() {
     const [bundles, setBundles] = useState<any[]>([]);
@@ -43,28 +43,7 @@ export default function FeaturedBundlesSection() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {bundles.map(bundle => (
-                        <div key={bundle.id} className="glass-panel rounded-3xl p-8 flex flex-col md:flex-row gap-8 items-center group transition-all hover:-translate-y-1">
-                            <div className="w-full md:w-2/5 aspect-square glass-panel !bg-surface/50 rounded-2xl flex items-center justify-center p-4">
-                                {bundle.thumbnail ? (
-                                    <img src={bundle.thumbnail} alt={bundle.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
-                                ) : (
-                                    <span className="text-xs font-mono text-muted-foreground">BUNDLE</span>
-                                )}
-                            </div>
-                            <div className="w-full md:w-3/5 flex flex-col h-full">
-                                <h3 className="text-2xl font-bold text-foreground mb-2">{bundle.name}</h3>
-                                <p className="text-muted-foreground mb-6 line-clamp-3">{bundle.description}</p>
-
-                                <div className="mt-auto flex items-center justify-between">
-                                    <div>
-                                        <span className="text-2xl font-black text-foreground">₹{bundle.pricePerDay}<span className="text-sm font-normal text-muted-foreground">/day</span></span>
-                                    </div>
-                                    <Link href={`/gear/${bundle.id}?type=bundle`} className="btn-liquid bg-background border border-surface-border px-6 py-2 rounded-xl font-bold text-sm text-foreground">
-                                        <span className="relative z-10">View Bundle</span>
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
+                        <BundleCard key={bundle.id} {...bundle} />
                     ))}
                 </div>
             </div>

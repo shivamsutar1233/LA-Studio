@@ -7,7 +7,14 @@ const router = Router();
 router.get("/", async (req: Request, res: Response) => {
     try {
         const db = await getDb();
-        const bundlesData = await db.all('SELECT * FROM bundles');
+        const bundlesData = await db.all(`
+          SELECT b.*, 
+                 COALESCE(AVG(r.rating), 0) as averageRating, 
+                 COUNT(r.id) as reviewCount
+          FROM bundles b
+          LEFT JOIN reviews r ON b.id = r.targetId AND r.targetType = 'bundle'
+          GROUP BY b.id
+        `);
         res.json(bundlesData);
     } catch (err) {
         res.status(500).json({ message: "Error fetching bundles" });
@@ -18,7 +25,16 @@ router.get("/featured", async (req: Request, res: Response) => {
     try {
         const db = await getDb();
         // Fetch top 3 most premium bundles based on pricePerDay
-        const featuredBundles = await db.all('SELECT * FROM bundles ORDER BY pricePerDay DESC LIMIT 3');
+        const featuredBundles = await db.all(`
+          SELECT b.*, 
+                 COALESCE(AVG(r.rating), 0) as averageRating, 
+                 COUNT(r.id) as reviewCount
+          FROM bundles b
+          LEFT JOIN reviews r ON b.id = r.targetId AND r.targetType = 'bundle'
+          GROUP BY b.id
+          ORDER BY pricePerDay DESC 
+          LIMIT 3
+        `);
         res.json(featuredBundles);
     } catch (err) {
         console.error("Error fetching featured bundles:", err);
@@ -29,7 +45,15 @@ router.get("/featured", async (req: Request, res: Response) => {
 router.get("/:id", async (req: Request, res: Response) => {
     try {
         const db = await getDb();
-        const bundle = await db.get('SELECT * FROM bundles WHERE id = ?', req.params.id);
+        const bundle = await db.get(`
+          SELECT b.*, 
+                 COALESCE(AVG(r.rating), 0) as averageRating, 
+                 COUNT(r.id) as reviewCount
+          FROM bundles b
+          LEFT JOIN reviews r ON b.id = r.targetId AND r.targetType = 'bundle'
+          WHERE b.id = ?
+          GROUP BY b.id
+        `, req.params.id);
         if (!bundle) {
             res.status(404).json({ message: "Bundle not found" });
         } else {

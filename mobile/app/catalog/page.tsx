@@ -14,6 +14,8 @@ interface GearParams {
   pricePerDay: number;
   thumbnail?: string;
   images?: string;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 function CatalogContent() {
@@ -95,6 +97,9 @@ function CatalogContent() {
         result.sort((a, b) => b.pricePerDay - a.pricePerDay);
         break;
       case "Highest Rated":
+        result.sort((a, b) => ((b as any).averageRating || 0) - ((a as any).averageRating || 0));
+        break;
+      case "Featured":
       default:
         break;
     }
@@ -145,6 +150,7 @@ function CatalogContent() {
               <option>Featured</option>
               <option>Price: Low to High</option>
               <option>Price: High to Low</option>
+              <option>Highest Rated</option>
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
               <ChevronRight className="h-3 w-3 rotate-90" />

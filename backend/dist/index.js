@@ -15,12 +15,14 @@ const bundles_1 = __importDefault(require("./routes/bundles"));
 const bookings_1 = __importDefault(require("./routes/bookings"));
 const admin_1 = __importDefault(require("./routes/admin"));
 const payment_1 = __importDefault(require("./routes/payment"));
+const reviews_1 = __importDefault(require("./routes/reviews"));
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3001;
 const allowedOrigins = [
     "http://localhost:3000",
     "https://leananglestudio.shop",
     "https://www.leananglestudio.shop",
+    "https://mobilela-studio.vercel.app"
 ].filter(Boolean);
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
@@ -49,6 +51,7 @@ app.use("/api/bundles", bundles_1.default);
 app.use("/api", bookings_1.default);
 app.use("/api/admin", admin_1.default);
 app.use("/api/payment", payment_1.default);
+app.use("/api/reviews", reviews_1.default);
 // Initialize DB and start server
 (0, database_1.initDb)().then(() => {
     app.listen(port, () => {

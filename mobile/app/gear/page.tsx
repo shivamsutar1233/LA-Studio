@@ -10,6 +10,7 @@ import { differenceInDays, parseISO, addDays, format } from 'date-fns';
 import { toast } from 'sonner';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import ReviewsSection from '@/components/ReviewsSection';
 
 interface GearDetail {
     id: string;
@@ -39,6 +40,7 @@ function GearDetailContent() {
     const [days, setDays] = useState(0);
     const [bookedDates, setBookedDates] = useState<{ startDate: string, endDate: string }[]>([]);
     const [isCheckingAvailability, setIsCheckingAvailability] = useState(true);
+    const [reviewStats, setReviewStats] = useState({ average: 0, count: 0 });
 
     const addToCart = useCartStore((state) => state.addToCart);
 
@@ -59,6 +61,14 @@ function GearDetailContent() {
                 }
 
                 setBookedDates(bookedRes.data || []);
+
+                // Fetch review stats
+                const reviewsRes = await api.get(`/api/reviews/${id}`);
+                const reviews = reviewsRes.data;
+                if (reviews.length > 0) {
+                    const avg = reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / reviews.length;
+                    setReviewStats({ average: Number(avg.toFixed(1)), count: reviews.length });
+                }
             } catch (error) {
                 console.error("Error fetching gear details:", error);
             } finally {
@@ -216,7 +226,7 @@ function GearDetailContent() {
                             {isBundle ? 'Included Items' : gear.category}
                         </span>
                         <div className="flex items-center text-yellow-500 text-sm font-bold gap-1">
-                            <Star className="h-4 w-4 fill-current" /> 4.9 (128 reviews)
+                            <Star className="h-4 w-4 fill-current" /> {reviewStats.count > 0 ? `${reviewStats.average} (${reviewStats.count} reviews)` : 'No reviews yet'}
                         </div>
                     </div>
 
@@ -377,6 +387,8 @@ function GearDetailContent() {
                     </div>
                 </div>
             </div>
+
+            {id && <ReviewsSection targetId={id} targetType={isBundle ? 'bundle' : 'gear'} />}
         </div>
     );
 }

@@ -201,6 +201,18 @@ export async function initDb(): Promise<DBAdapter> {
       isDefault INTEGER DEFAULT 0,
       FOREIGN KEY (userId) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS reviews (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL,
+      targetId TEXT NOT NULL,
+      targetType TEXT NOT NULL,
+      rating INTEGER NOT NULL,
+      comment TEXT,
+      createdAt TEXT NOT NULL,
+      mediaUrls TEXT DEFAULT '[]',
+      FOREIGN KEY (userId) REFERENCES users(id)
+    );
   `);
 
   // Migration for BundleIds in Bookings
@@ -347,6 +359,18 @@ export async function initDb(): Promise<DBAdapter> {
       await dbAdapter!.exec('DROP TABLE bookings;');
       await dbAdapter!.exec('ALTER TABLE bookings_new RENAME TO bookings;');
       await dbAdapter!.exec('PRAGMA foreign_keys=ON;');
+    }
+  }
+
+  // Migration for Review Media
+  const reviewsColumns = await dbAdapter!.all("PRAGMA table_info(reviews)");
+  const hasMediaUrls = reviewsColumns.some((c: any) => c.name === 'mediaUrls');
+  if (!hasMediaUrls) {
+    console.log("Migrating reviews table to include mediaUrls field...");
+    try {
+      await dbAdapter!.exec(`ALTER TABLE reviews ADD COLUMN mediaUrls TEXT DEFAULT '[]';`);
+    } catch (e) {
+      console.log("Migration warning (mediaUrls):", e);
     }
   }
 

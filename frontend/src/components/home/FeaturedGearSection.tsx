@@ -12,6 +12,8 @@ interface Gear {
     category: string;
     pricePerDay: number;
     thumbnail: string;
+    averageRating?: number;
+    reviewCount?: number;
 }
 
 export default function FeaturedGearSection() {

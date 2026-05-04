@@ -11,9 +11,11 @@ interface BundleCardProps {
     pricePerDay: number;
     thumbnail?: string;
     gearIds: string; // JSON array of gear IDs
+    averageRating?: number;
+    reviewCount?: number;
 }
 
-export default function BundleCard({ id, name, description, pricePerDay, thumbnail, gearIds }: BundleCardProps) {
+export default function BundleCard({ id, name, description, pricePerDay, thumbnail, gearIds, averageRating, reviewCount }: BundleCardProps) {
     const addToCart = useCartStore(state => state.addToCart);
     const gearCount = (() => {
         try {
@@ -63,6 +65,11 @@ export default function BundleCard({ id, name, description, pricePerDay, thumbna
                     <span className="px-2 py-0.5 rounded-md text-[8px] font-black bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-lg uppercase tracking-widest leading-none">
                         Bundle
                     </span>
+                    {reviewCount && reviewCount > 0 && (
+                        <span className="px-2 py-0.5 rounded-md text-[8px] font-black bg-yellow-500/90 backdrop-blur-md text-white shadow-lg w-max flex items-center gap-1 uppercase tracking-widest leading-none">
+                            ★ {averageRating?.toFixed(1)}
+                        </span>
+                    )}
                     {gearCount > 0 && (
                         <span className="px-2 py-0.5 rounded-md text-[8px] font-black bg-accent/90 backdrop-blur-md text-white shadow-lg w-max flex items-center gap-1 uppercase tracking-widest leading-none">
                             <CheckCircle className="h-2 w-2" /> {gearCount} items

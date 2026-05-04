@@ -14,6 +14,8 @@ interface GearParams {
   pricePerDay: number;
   thumbnail?: string;
   images?: string;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 function CatalogContent() {
@@ -95,6 +97,9 @@ function CatalogContent() {
         result.sort((a, b) => b.pricePerDay - a.pricePerDay);
         break;
       case "Highest Rated":
+        result.sort((a, b) => ((b as any).averageRating || 0) - ((a as any).averageRating || 0));
+        break;
+      case "Featured":
       default:
         break;
     }

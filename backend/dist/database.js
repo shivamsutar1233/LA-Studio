@@ -149,7 +149,9 @@ function initDb() {
       email TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
       password TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'user'
+      role TEXT NOT NULL DEFAULT 'user',
+      isEmailVerified INTEGER DEFAULT 0,
+      verificationToken TEXT
     );
 
     CREATE TABLE IF NOT EXISTS gears (
@@ -196,6 +198,17 @@ function initDb() {
       state TEXT NOT NULL,
       zip TEXT NOT NULL,
       isDefault INTEGER DEFAULT 0,
+      FOREIGN KEY (userId) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS reviews (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL,
+      targetId TEXT NOT NULL,
+      targetType TEXT NOT NULL,
+      rating INTEGER NOT NULL,
+      comment TEXT,
+      createdAt TEXT NOT NULL,
       FOREIGN KEY (userId) REFERENCES users(id)
     );
   `);
@@ -247,6 +260,35 @@ function initDb() {
             }
             catch (e) {
                 console.log("Migration warning (refundStatus):", e);
+            }
+        }
+        // Migration for Email Verification
+        const userColumns = yield dbAdapter.all("PRAGMA table_info(users)");
+        const hasIsEmailVerified = userColumns.some((c) => c.name === 'isEmailVerified');
+        if (!hasIsEmailVerified) {
+            console.log("Migrating users table to include email verification fields...");
+            try {
+                yield dbAdapter.exec(`ALTER TABLE users ADD COLUMN isEmailVerified INTEGER DEFAULT 0;`);
+                yield dbAdapter.exec(`ALTER TABLE users ADD COLUMN verificationToken TEXT;`);
+                // Auto-verify existing users to avoid locking them out
+                yield dbAdapter.exec(`UPDATE users SET isEmailVerified = 1;`);
+            }
+            catch (e) {
+                console.log("Migration warning (email verification):", e);
+            }
+        }
+        // Migration for Email Change OTP
+        const hasEmailChangeOtp = userColumns.some((c) => c.name === 'emailChangeOtp');
+        if (!hasEmailChangeOtp) {
+            console.log("Migrating users table to include email change OTP fields...");
+            try {
+                yield dbAdapter.exec(`ALTER TABLE users ADD COLUMN pendingEmail TEXT;`);
+                yield dbAdapter.exec(`ALTER TABLE users ADD COLUMN emailChangeOtp TEXT;`);
+                yield dbAdapter.exec(`ALTER TABLE users ADD COLUMN emailChangeOtpExpiry INTEGER;`);
+                yield dbAdapter.exec(`ALTER TABLE users ADD COLUMN emailChangeStep TEXT;`);
+            }
+            catch (e) {
+                console.log("Migration warning (email change OTP):", e);
             }
         }
         // Migration for Phase 8: Schema Split for images

@@ -7,7 +7,14 @@ const router = Router();
 router.get("/", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
-    const gearsData = await db.all('SELECT * FROM gears');
+    const gearsData = await db.all(`
+      SELECT g.*, 
+             COALESCE(AVG(r.rating), 0) as averageRating, 
+             COUNT(r.id) as reviewCount
+      FROM gears g
+      LEFT JOIN reviews r ON g.id = r.targetId AND r.targetType = 'gear'
+      GROUP BY g.id
+    `);
     res.json(gearsData);
   } catch (err) {
     res.status(500).json({ message: "Error fetching gears" });
@@ -18,7 +25,16 @@ router.get("/featured", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     // Fetch top 3 most premium gears based on pricePerDay
-    const featuredGear = await db.all('SELECT * FROM gears ORDER BY pricePerDay DESC LIMIT 3');
+    const featuredGear = await db.all(`
+      SELECT g.*, 
+             COALESCE(AVG(r.rating), 0) as averageRating, 
+             COUNT(r.id) as reviewCount
+      FROM gears g
+      LEFT JOIN reviews r ON g.id = r.targetId AND r.targetType = 'gear'
+      GROUP BY g.id
+      ORDER BY pricePerDay DESC 
+      LIMIT 3
+    `);
     res.json(featuredGear);
   } catch (err) {
     console.error("Error fetching featured gear:", err);
@@ -29,7 +45,15 @@ router.get("/featured", async (req: Request, res: Response) => {
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
-    const gear = await db.get('SELECT * FROM gears WHERE id = ?', req.params.id);
+    const gear = await db.get(`
+      SELECT g.*, 
+             COALESCE(AVG(r.rating), 0) as averageRating, 
+             COUNT(r.id) as reviewCount
+      FROM gears g
+      LEFT JOIN reviews r ON g.id = r.targetId AND r.targetType = 'gear'
+      WHERE g.id = ?
+      GROUP BY g.id
+    `, req.params.id);
     if (!gear) {
       res.status(404).json({ message: "Gear not found" });
     } else {

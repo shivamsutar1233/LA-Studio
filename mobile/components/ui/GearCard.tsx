@@ -12,9 +12,11 @@ interface GearParams {
   category: string;
   pricePerDay: number;
   thumbnail?: string;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
-export default function GearCard({ id, name, category, pricePerDay, thumbnail }: GearParams) {
+export default function GearCard({ id, name, category, pricePerDay, thumbnail, averageRating, reviewCount }: GearParams) {
   const router = useRouter();
   const addToCart = useCartStore(state => state.addToCart);
 
@@ -62,7 +64,7 @@ export default function GearCard({ id, name, category, pricePerDay, thumbnail }:
         <div className="flex justify-between items-center mb-2">
           <p className="text-[10px] font-black text-accent tracking-[0.1em] uppercase">{category}</p>
           <div className="flex items-center text-yellow-500 text-[10px] font-black gap-1">
-            <Star className="h-3 w-3 fill-current" /> 4.9
+            <Star className="h-3 w-3 fill-current" /> {reviewCount && reviewCount > 0 ? averageRating?.toFixed(1) : 'New'}
           </div>
         </div>
 

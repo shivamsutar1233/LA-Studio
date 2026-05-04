@@ -16,7 +16,14 @@ const router = (0, express_1.Router)();
 router.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const db = yield (0, database_1.getDb)();
-        const bundlesData = yield db.all('SELECT * FROM bundles');
+        const bundlesData = yield db.all(`
+          SELECT b.*, 
+                 COALESCE(AVG(r.rating), 0) as averageRating, 
+                 COUNT(r.id) as reviewCount
+          FROM bundles b
+          LEFT JOIN reviews r ON b.id = r.targetId AND r.targetType = 'bundle'
+          GROUP BY b.id
+        `);
         res.json(bundlesData);
     }
     catch (err) {
@@ -27,7 +34,16 @@ router.get("/featured", (req, res) => __awaiter(void 0, void 0, void 0, function
     try {
         const db = yield (0, database_1.getDb)();
         // Fetch top 3 most premium bundles based on pricePerDay
-        const featuredBundles = yield db.all('SELECT * FROM bundles ORDER BY pricePerDay DESC LIMIT 3');
+        const featuredBundles = yield db.all(`
+          SELECT b.*, 
+                 COALESCE(AVG(r.rating), 0) as averageRating, 
+                 COUNT(r.id) as reviewCount
+          FROM bundles b
+          LEFT JOIN reviews r ON b.id = r.targetId AND r.targetType = 'bundle'
+          GROUP BY b.id
+          ORDER BY pricePerDay DESC 
+          LIMIT 3
+        `);
         res.json(featuredBundles);
     }
     catch (err) {
@@ -38,7 +54,15 @@ router.get("/featured", (req, res) => __awaiter(void 0, void 0, void 0, function
 router.get("/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const db = yield (0, database_1.getDb)();
-        const bundle = yield db.get('SELECT * FROM bundles WHERE id = ?', req.params.id);
+        const bundle = yield db.get(`
+          SELECT b.*, 
+                 COALESCE(AVG(r.rating), 0) as averageRating, 
+                 COUNT(r.id) as reviewCount
+          FROM bundles b
+          LEFT JOIN reviews r ON b.id = r.targetId AND r.targetType = 'bundle'
+          WHERE b.id = ?
+          GROUP BY b.id
+        `, req.params.id);
         if (!bundle) {
             res.status(404).json({ message: "Bundle not found" });
         }

@@ -86,6 +86,43 @@ router.get("/bookings", authMiddleware_1.authenticateToken, authMiddleware_1.req
         res.status(500).json({ message: "Error fetching admin data" });
     }
 }));
+router.get("/bookings/:id", authMiddleware_1.authenticateToken, authMiddleware_1.requireAdmin, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const db = yield (0, database_1.getDb)();
+        const b = yield db.get(`
+      SELECT b.*, 
+             a.street as addressStreet, 
+             a.city as addressCity, 
+             a.state as addressState, 
+             a.zip as addressZip 
+      FROM bookings b 
+      LEFT JOIN addresses a ON b.addressId = a.id 
+      WHERE b.id = ?
+    `, [req.params.id]);
+        if (!b) {
+            res.status(404).json({ message: "Booking not found" });
+            return;
+        }
+        const { addressStreet, addressCity, addressState, addressZip } = b, rest = __rest(b, ["addressStreet", "addressCity", "addressState", "addressZip"]);
+        let addressObj = null;
+        if (b.addressId && addressStreet) {
+            addressObj = {
+                id: b.addressId,
+                street: addressStreet,
+                city: addressCity,
+                state: addressState,
+                zip: addressZip
+            };
+        }
+        // Also fetch the customer's User record just in case
+        const customer = yield db.get('SELECT id, email, name, role FROM users WHERE id = ?', b.userId);
+        res.json(Object.assign(Object.assign({}, rest), { deliveryAddress: addressObj, customer }));
+    }
+    catch (err) {
+        console.error("Admin Fetch Booking Error:", err);
+        res.status(500).json({ message: "Error fetching booking details" });
+    }
+}));
 router.put("/bookings/:id/status", authMiddleware_1.authenticateToken, authMiddleware_1.requireAdmin, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { status } = req.body;

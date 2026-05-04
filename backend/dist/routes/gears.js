@@ -16,7 +16,14 @@ const router = (0, express_1.Router)();
 router.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const db = yield (0, database_1.getDb)();
-        const gearsData = yield db.all('SELECT * FROM gears');
+        const gearsData = yield db.all(`
+      SELECT g.*, 
+             COALESCE(AVG(r.rating), 0) as averageRating, 
+             COUNT(r.id) as reviewCount
+      FROM gears g
+      LEFT JOIN reviews r ON g.id = r.targetId AND r.targetType = 'gear'
+      GROUP BY g.id
+    `);
         res.json(gearsData);
     }
     catch (err) {
@@ -27,7 +34,16 @@ router.get("/featured", (req, res) => __awaiter(void 0, void 0, void 0, function
     try {
         const db = yield (0, database_1.getDb)();
         // Fetch top 3 most premium gears based on pricePerDay
-        const featuredGear = yield db.all('SELECT * FROM gears ORDER BY pricePerDay DESC LIMIT 3');
+        const featuredGear = yield db.all(`
+      SELECT g.*, 
+             COALESCE(AVG(r.rating), 0) as averageRating, 
+             COUNT(r.id) as reviewCount
+      FROM gears g
+      LEFT JOIN reviews r ON g.id = r.targetId AND r.targetType = 'gear'
+      GROUP BY g.id
+      ORDER BY pricePerDay DESC 
+      LIMIT 3
+    `);
         res.json(featuredGear);
     }
     catch (err) {
@@ -38,7 +54,15 @@ router.get("/featured", (req, res) => __awaiter(void 0, void 0, void 0, function
 router.get("/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const db = yield (0, database_1.getDb)();
-        const gear = yield db.get('SELECT * FROM gears WHERE id = ?', req.params.id);
+        const gear = yield db.get(`
+      SELECT g.*, 
+             COALESCE(AVG(r.rating), 0) as averageRating, 
+             COUNT(r.id) as reviewCount
+      FROM gears g
+      LEFT JOIN reviews r ON g.id = r.targetId AND r.targetType = 'gear'
+      WHERE g.id = ?
+      GROUP BY g.id
+    `, req.params.id);
         if (!gear) {
             res.status(404).json({ message: "Gear not found" });
         }

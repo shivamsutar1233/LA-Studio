@@ -11,6 +11,7 @@ import bundlesRoutes from "./routes/bundles";
 import bookingRoutes from "./routes/bookings";
 import adminRoutes from "./routes/admin";
 import paymentRoutes from "./routes/payment";
+import reviewRoutes from "./routes/reviews";
 
 const app: Express = express();
 const port = process.env.PORT || 3001;
@@ -49,6 +50,7 @@ app.use("/api/bundles", bundlesRoutes);
 app.use("/api", bookingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 // Initialize DB and start server
 initDb().then(() => {
