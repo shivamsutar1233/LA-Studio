@@ -268,7 +268,6 @@ export default function ReviewsSection({ targetId, targetType }: ReviewsSectionP
                     </div>
                 )}
             </div>
-            </div>
 
             {/* Media Modal */}
             {viewingMedia && (
